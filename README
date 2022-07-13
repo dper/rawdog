@@ -1,5 +1,7 @@
 rawdog: RSS Aggregator Without Delusions Of Grandeur
+
 Adam Sampson <ats@offog.org>
+Douglas Perkins <contact@dperkins.org>
 
 rawdog is a feed aggregator, capable of producing a personal "river of
 news" or a public "planet" page. It supports all common feed formats,
@@ -10,16 +12,16 @@ customizable update times, and uses ETags, Last-Modified, gzip
 compression, and RFC3229+feed to minimize network bandwidth usage. Its
 behaviour is highly customisable using plugins written in Python.
 
-This version has been simplified and updated to use python3. It was
-modified by Douglas Perkins <contact@dperkins.org> in 2022.
+This version uses Python 3. In the switch from Python 2 to Python 3,
+some features were removed.
 
-rawdog has the following dependencies:
+Dependencies:
 
 - Python 3.10 or later
 - feedparser 6.0.8 or later
 
 This file is designed to be used in place.  For example, download it to
-your ~/src directory and run it from there using the "rawdog" command.
+your ~/src directory and run it from there using the "rawdog" command. 
 Typically, "rawdog -uwv" is what you want.
 
 rawdog needs a config file to function. Make the directory ".rawdog" in
@@ -62,5 +64,4 @@ anything for the next thirty years), you can forcibly clear its state by
 removing the ~/.rawdog/state file (and the ~/.rawdog/feeds/*.state
 files, if you've got the "splitstate" option turned on).
 
-If you don't like the appearance of rawdog, then customise the style.css
-file.
+If you don't like the appearance, customise style.css.
