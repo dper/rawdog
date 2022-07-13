@@ -13,9 +13,10 @@ likely to be a feed for the given URL.
 Required: Python 2.4 or later, feedparser
 """
 
+
 __license__ = """
 Copyright (c) 2008 Decklin Foster <decklin@red-bean.com>
-Copyright (c) 2013, 2015 Adam Sampson <ats@offog.org>
+Copyright (c) 2013, 2015, 2021 Adam Sampson <ats@offog.org>
 
 Permission to use, copy, modify, and/or distribute this software for
 any purpose with or without fee is hereby granted, provided that
@@ -32,30 +33,33 @@ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.
 """
 
-import cStringIO
+import io
 import feedparser
 import gzip
 import re
-import urllib2
-import urlparse
-import HTMLParser
+import six.moves.urllib.request, six.moves.urllib.error, six.moves.urllib.parse
+import six.moves.urllib.parse
+import six.moves.html_parser
 
-def is_feed(url):
+HTTP_AGENT = "feedscanner/1.0"
+
+def is_feed(url, agent=HTTP_AGENT):
     """Return true if feedparser can understand the given URL as a feed."""
 
-    p = feedparser.parse(url)
+    p = feedparser.parse(url, agent=agent)
     version = p.get("version")
     if version is None:
         version = ""
     return version != ""
 
-def fetch_url(url):
+def fetch_url(url, agent=HTTP_AGENT):
     """Fetch the given URL and return the data from it as a Unicode string."""
 
-    request = urllib2.Request(url)
+    request = six.moves.urllib.request.Request(url)
+    request.add_header("User-Agent", agent)
     request.add_header("Accept-Encoding", "gzip")
 
-    f = urllib2.urlopen(request)
+    f = six.moves.urllib.request.urlopen(request)
     headers = f.info()
     data = f.read()
     f.close()
@@ -65,7 +69,7 @@ def fetch_url(url):
     encodings = headers.get("Content-Encoding", "")
     encodings = [s.strip() for s in encodings.split(",")]
     if "gzip" in encodings:
-        f = gzip.GzipFile(fileobj=cStringIO.StringIO(data))
+        f = gzip.GzipFile(fileobj=io.StringIO(data))
         data = f.read()
         f.close()
 
@@ -75,15 +79,15 @@ def fetch_url(url):
 
     return data
 
-class FeedFinder(HTMLParser.HTMLParser):
+class FeedFinder(six.moves.html_parser.HTMLParser):
     def __init__(self, base_uri):
-        HTMLParser.HTMLParser.__init__(self)
+        six.moves.html_parser.HTMLParser.__init__(self)
         self.found = []
         self.count = 0
         self.base_uri = base_uri
 
     def add(self, score, href):
-        url = urlparse.urljoin(self.base_uri, href)
+        url = six.moves.urllib.parse.urljoin(self.base_uri, href)
         lower = url.lower()
 
         # Some sites provide feeds both for entries and comments;
@@ -118,20 +122,21 @@ class FeedFinder(HTMLParser.HTMLParser):
         if tag == 'a' and re.search(r'\b(rss|atom|rdf|feeds?)\b', href, re.I):
             self.add(100, href)
 
-def feeds(page_url):
-    """Search the given URL for possible feeds, returning a list of them."""
+def feeds(page_url, agent=HTTP_AGENT):
+    """Search the given URL for possible feeds, returning a list of them.
+    agent is the User-Agent for HTTP requests."""
 
     # If the URL is a feed, there's no need to scan it for links.
-    if is_feed(page_url):
+    if is_feed(page_url, agent):
         return [page_url]
 
-    data = fetch_url(page_url)
+    data = fetch_url(page_url, agent)
     parser = FeedFinder(page_url)
     try:
         parser.feed(data)
-    except HTMLParser.HTMLParseError:
+    except six.moves.html_parser.HTMLParseError:
         pass
     found = parser.urls()
 
     # Return only feeds that feedparser can understand.
-    return [feed for feed in found if is_feed(feed)]
+    return [feed for feed in found if is_feed(feed, agent)]

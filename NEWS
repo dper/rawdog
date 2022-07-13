@@ -1,8 +1,51 @@
+- rawdog 3.0
+
+Converted to Python 3. In the process, testing files were removed. For
+this developer (not the original developer), a very simple setup is
+desirable.
+
+- rawdog 2.24
+
+feedscanner now sets User-Agent explicitly, so rawdog --add/--find use
+rawdog's User-Agent rather than the default one. As some blogging
+services block requests with the default Python User-Agent, this makes
+scanning a bit more effective.
+
+Use the Python 3-style print function (supported since Python 2.6).
+
 - rawdog 2.23
+
+rawdog now requires Python 2.7. Python 2.6 doesn't build with current
+toolchains, and hasn't been included in Debian for several releases, so
+I can't test against it any more.
 
 When automatically updating the config file in response to an HTTP
 redirect fails, produce a more sensible error message (including the URL
 of the feed in question).
+
+Add the --find option, which shows what feedscanner returns for a given
+URL (as --dump does for feedparser).
+
+The location of BASE_OPTIONS has changed in pytidylib 0.3.2; rather than
+trying to change it, override the corresponding options explicitly.
+The meaning of tidylib's wrap option has also changed, so set a sensible
+default value.
+
+Support the current development version of feedparser (which will
+presumably be the 5.3 release eventually), which has been restructured
+into multiple modules, and raises network exceptions (e.g. timeouts)
+directly from feedparser.parse rather than putting them in
+bozo_exception.
+
+rawdog's exception-handling code has been cleaned up as a result of the
+above, and should work consistently for old and new versions of
+feedparser. In the feedparser result dict, "bozo_exception" is now
+converted to "rawdog_exception" for network errors, and "rawdog_timeout"
+is set if a timeout exception occurred. For compatibility with existing
+plugins, an empty "feed" is also provided on a timeout.
+
+Update COPYING and the GPL v2 license notices to the FSF's current
+recommended text.
 
 - rawdog 2.22
 

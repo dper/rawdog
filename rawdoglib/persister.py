@@ -1,22 +1,23 @@
 # persister: persist Python objects safely to pickle files
 # Copyright 2003, 2004, 2005, 2013, 2014 Adam Sampson <ats@offog.org>
 #
-# rawdog is free software; you can redistribute and/or modify it
-# under the terms of that license as published by the Free Software
-# Foundation; either version 2 of the License, or (at your option)
-# any later version.
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
 #
-# rawdog is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-# General Public License for more details.
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with rawdog; see the file COPYING. If not, write to the Free
-# Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
-# MA 02110-1301, USA, or see http://www.gnu.org/.
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import cPickle as pickle
+
+
+
+import six.moves.cPickle as pickle
 import errno
 import fcntl
 import os
@@ -56,7 +57,7 @@ class Persisted:
 			try:
 				os.rename(self.filename + ext,
 				          new_filename + ext)
-			except OSError, e:
+			except OSError as e:
 				# If the file doesn't exist (yet),
 				# that's OK.
 				if e.errno != errno.ENOENT:
@@ -92,8 +93,8 @@ class Persisted:
 		except KeyboardInterrupt:
 			sys.exit(1)
 		except:
-			print "An error occurred while reading state from " + os.path.abspath(self.filename) + "."
-			print "This usually means the file is corrupt, and removing it will fix the problem."
+			print("An error occurred while reading state from " + os.path.abspath(self.filename) + ".")
+			print("This usually means the file is corrupt, and removing it will fix the problem.")
 			sys.exit(1)
 
 		self.refcount = 1
@@ -109,7 +110,7 @@ class Persisted:
 			if no_block:
 				mode |= fcntl.LOCK_NB
 			fcntl.lockf(self.lock_file.fileno(), mode)
-		except IOError, e:
+		except IOError as e:
 			if no_block and e.errno in (errno.EACCES, errno.EAGAIN):
 				return False
 			raise e
@@ -146,7 +147,7 @@ class Persisted:
 		if self.object.is_modified():
 			self.persister.log("Saving state file: ", self.filename)
 			newname = "%s.new-%d" % (self.filename, os.getpid())
-			newfile = open(newname, "w")
+			newfile = open(newname, "wb")
 			pickle.dump(self.object, newfile, pickle.HIGHEST_PROTOCOL)
 			newfile.close()
 			os.rename(newname, self.filename)

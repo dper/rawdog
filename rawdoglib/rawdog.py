@@ -1,22 +1,24 @@
 # rawdog: RSS aggregator without delusions of grandeur.
-# Copyright 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2012, 2013, 2014, 2015, 2016, 2017 Adam Sampson <ats@offog.org>
+# Copyright 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2021 Adam Sampson <ats@offog.org>
+# Converted to python3 by Douglas Perkins <contact@dperkins.org> 2022.
 #
-# rawdog is free software; you can redistribute and/or modify it
-# under the terms of that license as published by the Free Software
-# Foundation; either version 2 of the License, or (at your option)
-# any later version.
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
 #
-# rawdog is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-# General Public License for more details.
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with rawdog; see the file COPYING. If not, write to the Free
-# Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
-# MA 02110-1301, USA, or see http://www.gnu.org/.
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-VERSION = "2.23rc1"
+from six.moves import map
+import six
+from six.moves import range
+VERSION = "2.24rc1"
 HTTP_AGENT = "rawdog/" + VERSION
 STATE_VERSION = 2
 
@@ -24,13 +26,14 @@ import rawdoglib.feedscanner
 from rawdoglib.persister import Persistable, Persister
 from rawdoglib.plugins import Box, call_hook, load_plugins
 
-from cStringIO import StringIO
+from io import StringIO
 import base64
 import calendar
 import cgi
 import feedparser
 import getopt
 import hashlib
+import html
 import locale
 import os
 import re
@@ -40,8 +43,8 @@ import sys
 import threading
 import time
 import types
-import urllib2
-import urlparse
+import six.moves.urllib.request, six.moves.urllib.error, six.moves.urllib.parse
+import six.moves.urllib.parse
 
 try:
 	import tidylib
@@ -53,15 +56,15 @@ try:
 except:
 	mxtidy = None
 
-# Turn off content-cleaning, since we want to see an approximation to the
-# original content for hashing. rawdog will sanitise HTML when writing.
-feedparser.RESOLVE_RELATIVE_URIS = 0
-feedparser.SANITIZE_HTML = 0
-
-# Disable microformat support, because it tends to return poor-quality data
-# (e.g. identifying inappropriate things as enclosures), and it relies on
-# BeautifulSoup which is unable to parse many feeds.
-feedparser.PARSE_MICROFORMATS = 0
+# The sanitisation code was restructured in feedparser 5.3.
+try:
+	_resolveRelativeURIs = feedparser.urls.resolve_relative_uris
+except AttributeError:
+	_resolveRelativeURIs = feedparser._resolveRelativeURIs
+try:
+	_HTMLSanitizer = feedparser.sanitizer._HTMLSanitizer
+except AttributeError:
+	_HTMLSanitizer = feedparser._HTMLSanitizer
 
 # This is initialised in main().
 persister = None
@@ -75,17 +78,17 @@ def safe_ftime(format, t):
 	"""Format a time value into a string in the current locale (as
 	time.strftime), but encode the result as ASCII HTML."""
 	try:
-		u = unicode(time.strftime(format, t), get_system_encoding())
-	except ValueError, e:
-		u = u"(bad time %s; %s)" % (repr(t), str(e))
+		u = time.strftime(format, t)
+	except ValueError as e:
+		u = "(bad time %s; %s)" % (repr(t), str(e))
 	return encode_references(u)
 
 def format_time(secs, config):
 	"""Format a time and date nicely."""
 	try:
 		t = time.localtime(secs)
-	except ValueError, e:
-		return u"(bad time %s; %s)" % (repr(secs), str(e))
+	except ValueError as e:
+		return "(bad time %s; %s)" % (repr(secs), str(e))
 	format = config["datetimeformat"]
 	if format is None:
 		format = config["timeformat"] + ", " + config["dayformat"]
@@ -119,8 +122,8 @@ def sanitise_html(html, baseurl, inline, config):
 	# "<!doctype html!>"); just remove them all.
 	html = re.sub(r'<![^>]*>', '', html)
 
-	html = feedparser._resolveRelativeURIs(html, baseurl, "UTF-8", type)
-	p = feedparser._HTMLSanitizer("UTF-8", type)
+	html = _resolveRelativeURIs(html, baseurl, "UTF-8", type)
+	p = _HTMLSanitizer("UTF-8", type)
 	p.feed(html)
 	html = p.output()
 
@@ -134,20 +137,29 @@ def sanitise_html(html, baseurl, inline, config):
 			html = "<p>" + html
 
 	if config["tidyhtml"]:
+		# This must include: options where the default value in tidy
+		# has changed at some point, and pytidylib's BASE_OPTIONS which
+		# it would otherwise set if we didn't specify them.
 		args = {
 			"numeric_entities": 1,
+			# In tidy 0.99 these are ASCII; in tidy 5, UTF-8.
 			"input_encoding": "ascii",
 			"output_encoding": "ascii",
 			"output_html": 1,
 			"output_xhtml": 0,
 			"output_xml": 0,
-			"wrap": 0,
+			"indent": 0,
+			"tidy-mark": 0,
+			"alt-text": "",
+			"doctype": "strict",
+			"force-output": 1,
+			# In tidy 0.99, wrap=0 means don't wrap.
+			# In tidy 5, wrap=0 means wrap to width 0.
+			"wrap": 68,
 			}
 		call_hook("mxtidy_args", config, args, baseurl, inline)
 		call_hook("tidy_args", config, args, baseurl, inline)
 		if tidylib is not None:
-			# Disable PyTidyLib's somewhat unhelpful defaults.
-			tidylib.BASE_OPTIONS = {}
 			output = tidylib.tidy_document(html, args)[0]
 		elif mxtidy is not None:
 			output = mxtidy.tidy(html, None, None, **args)[2]
@@ -157,7 +169,6 @@ def sanitise_html(html, baseurl, inline, config):
 		html = output[output.find("<body>") + 6
 		              : output.rfind("</body>")].strip()
 
-	html = html.decode("UTF-8")
 	box = Box(html)
 	call_hook("clean_html", config, box, baseurl, inline)
 	return box.value
@@ -181,7 +192,7 @@ def select_detail(details):
 		ctype = detail.get("type", None)
 		if ctype is None:
 			continue
-		if TYPES.has_key(ctype):
+		if ctype in TYPES:
 			score = TYPES[ctype]
 		else:
 			score = 0
@@ -202,19 +213,19 @@ def detail_to_html(details, inline, config, force_preformatted=False):
 		return None
 
 	if force_preformatted:
-		html = "<pre>" + cgi.escape(detail["value"]) + "</pre>"
+		h = "<pre>" + html.escape(detail["value"]) + "</pre>"
 	elif detail["type"] == "text/plain":
-		html = cgi.escape(detail["value"])
+		h = html.escape(detail["value"])
 	else:
-		html = detail["value"]
+		h = detail["value"]
 
-	return sanitise_html(html, detail["base"], inline, config)
+	return sanitise_html(h, detail["base"], inline, config)
 
 def author_to_html(entry, feedurl, config):
 	"""Convert feedparser author information to HTML."""
 	author_detail = entry.get("author_detail")
 
-	if author_detail is not None and author_detail.has_key("name"):
+	if author_detail is not None and "name" in author_detail:
 		name = author_detail["name"]
 	else:
 		name = entry.get("author")
@@ -222,29 +233,29 @@ def author_to_html(entry, feedurl, config):
 	url = None
 	fallback = "author"
 	if author_detail is not None:
-		if author_detail.has_key("href"):
+		if "href" in author_detail:
 			url = author_detail["href"]
-		elif author_detail.has_key("email") and author_detail["email"] is not None:
+		elif "email" in author_detail and author_detail["email"] is not None:
 			url = "mailto:" + author_detail["email"]
-		if author_detail.has_key("email") and author_detail["email"] is not None:
+		if "email" in author_detail and author_detail["email"] is not None:
 			fallback = author_detail["email"]
-		elif author_detail.has_key("href") and author_detail["href"] is not None:
+		elif "href" in author_detail and author_detail["href"] is not None:
 			fallback = author_detail["href"]
 
 	if name == "":
 		name = fallback
 
 	if url is None:
-		html = name
+		h = name
 	else:
-		html = "<a href=\"" + cgi.escape(url) + "\">" + cgi.escape(name) + "</a>"
+		h = "<a href=\"" + html.escape(url) + "\">" + html.escape(name) + "</a>"
 
 	# We shouldn't need a base URL here anyway.
-	return sanitise_html(html, feedurl, True, config)
+	return sanitise_html(h, feedurl, True, config)
 
 def string_to_html(s, config):
 	"""Convert a string to HTML."""
-	return sanitise_html(cgi.escape(s), "", True, config)
+	return sanitise_html(html.escape(s), "", True, config)
 
 template_re = re.compile(r'(__[^_].*?__)')
 def fill_template(template, bits):
@@ -264,23 +275,21 @@ def fill_template(template, bits):
 	def write(s):
 		if not False in if_stack:
 			f.write(s)
+
 	for part in template_re.split(template):
 		if part.startswith("__") and part.endswith("__"):
 			key = part[2:-2]
 			if key.startswith("if_"):
 				k = key[3:]
-				if_stack.append(bits.has_key(k) and bits[k] != "")
+				if_stack.append(k in bits and bits[k] != "")
 			elif key == "endif":
 				if if_stack != []:
 					if_stack.pop()
 			elif key == "else":
 				if if_stack != []:
 					if_stack.append(not if_stack.pop())
-			elif bits.has_key(key):
-				if type(bits[key]) == types.UnicodeType:
-					write(bits[key].encode(encoding))
-				else:
-					write(bits[key])
+			elif key in bits:
+				write(bits[key])
 		else:
 			write(part)
 	v = f.getvalue()
@@ -292,18 +301,13 @@ def load_file(name):
 	"""Read the contents of a template file, caching the result so we don't
 	have to read the file multiple times. The file is assumed to be in the
 	system encoding; the result will be an ASCII string."""
-	if not file_cache.has_key(name):
+	if name not in file_cache:
 		try:
 			f = open(name)
 			data = f.read()
 			f.close()
 		except IOError:
 			raise ConfigError("Can't read template file: " + name)
-
-		try:
-			data = data.decode(get_system_encoding())
-		except UnicodeDecodeError, e:
-			raise ConfigError("Character encoding problem in template file: " + name + ": " + str(e))
 
 		data = encode_references(data)
 		file_cache[name] = data.encode(get_system_encoding())
@@ -315,33 +319,35 @@ def write_ascii(f, s, config):
 	and write UTF-8."""
 	try:
 		f.write(s)
-	except UnicodeEncodeError, e:
+	except UnicodeEncodeError as e:
 		config.bug("Error encoding output as ASCII; UTF-8 has been written instead.\n", e)
 		f.write(s.encode("UTF-8"))
 
 def short_hash(s):
 	"""Return a human-manipulatable 'short hash' of a string."""
-	return hashlib.sha1(s).hexdigest()[-8:]
+	b = s.encode('utf-8')
+	return hashlib.sha1(b).hexdigest()[-8:]
 
 def ensure_unicode(value, encoding):
 	"""Convert a structure returned by feedparser into an equivalent where
 	all strings are represented as fully-decoded unicode objects."""
 
 	if isinstance(value, str):
-		try:
-			return value.decode(encoding)
-		except:
+		return value
+		#try:
+		#	return value.decode(encoding)
+		#except:
 			# If the encoding's invalid, at least preserve
 			# the byte stream.
-			return value.decode("ISO-8859-1")
-	elif isinstance(value, unicode) and type(value) is not unicode:
+		#	return value.decode("ISO-8859-1")
+	elif isinstance(value, six.text_type) and type(value) is not six.text_type:
 		# This is a subclass of unicode (e.g.  BeautifulSoup's
 		# NavigableString, which is unpickleable in some versions of
 		# the library), so force it to be a real unicode object.
-		return unicode(value)
+		return six.text_type(value)
 	elif isinstance(value, dict):
 		d = {}
-		for (k, v) in value.items():
+		for (k, v) in list(value.items()):
 			d[k] = ensure_unicode(v, encoding)
 		return d
 	elif isinstance(value, list):
@@ -353,6 +359,12 @@ timeout_re = re.compile(r'timed? ?out', re.I)
 def is_timeout_exception(exc):
 	"""Return True if the given exception object suggests that a timeout
 	occurred, else return False."""
+
+	if exc is None:
+		return False
+
+	if isinstance(exc, socket.timeout):
+		return True
 
 	# Since urlopen throws away the original exception object,
 	# we have to look at the stringified form to tell if it was a timeout.
@@ -368,7 +380,7 @@ def is_timeout_exception(exc):
 	#   <urlopen error ('_ssl.c:563: The handshake operation timed out',)>
 	return timeout_re.search(str(exc)) is not None
 
-class BasicAuthProcessor(urllib2.BaseHandler):
+class BasicAuthProcessor(six.moves.urllib.request.BaseHandler):
 	"""urllib2 handler that does HTTP basic authentication
 	or proxy authentication with a fixed username and password.
 	(Unlike the classes to do this in urllib2, this doesn't wait
@@ -387,7 +399,7 @@ class BasicAuthProcessor(urllib2.BaseHandler):
 
 	https_request = http_request
 
-class DisableIMProcessor(urllib2.BaseHandler):
+class DisableIMProcessor(six.moves.urllib.request.BaseHandler):
 	"""urllib2 handler that disables RFC 3229 for a request."""
 
 	def http_request(self, req):
@@ -398,7 +410,7 @@ class DisableIMProcessor(urllib2.BaseHandler):
 
 	https_request = http_request
 
-class ResponseLogProcessor(urllib2.BaseHandler):
+class ResponseLogProcessor(six.moves.urllib.request.BaseHandler):
 	"""urllib2 handler that maintains a log of HTTP responses."""
 
 	# Run after anything that's mangling headers (usually 500 or less), but
@@ -454,16 +466,16 @@ class Feed:
 		handlers.append(logger)
 
 		proxies = {}
-		for name, value in self.args.items():
+		for name, value in list(self.args.items()):
 			if name.endswith("_proxy"):
 				proxies[name[:-6]] = value
 		if len(proxies) != 0:
-			handlers.append(urllib2.ProxyHandler(proxies))
+			handlers.append(six.moves.urllib.request.ProxyHandler(proxies))
 
-		if self.args.has_key("proxyuser") and self.args.has_key("proxypassword"):
+		if "proxyuser" in self.args and "proxypassword" in self.args:
 			handlers.append(BasicAuthProcessor(self.args["proxyuser"], self.args["proxypassword"], proxy=True))
 
-		if self.args.has_key("user") and self.args.has_key("password"):
+		if "user" in self.args and "password" in self.args:
 			handlers.append(BasicAuthProcessor(self.args["user"], self.args["password"]))
 
 		if self.get_keepmin(config) == 0 or config["currentonly"]:
@@ -482,18 +494,53 @@ class Feed:
 		if not ":" in url:
 			url = "file:" + url
 
+		parse_args = {
+			"etag": self.etag,
+			"modified": self.modified,
+			"agent": HTTP_AGENT,
+			"handlers": handlers,
+			}
+		# Turn off content-cleaning, as we need the original content
+		# for hashing and we'll do this ourselves afterwards.
+		if hasattr(feedparser, "api"):
+			# feedparser >= 5.3
+			parse_args["sanitize_html"] = False
+			parse_args["resolve_relative_uris"] = False
+		else:
+			# feedparser < 5.3
+			feedparser.RESOLVE_RELATIVE_URIS = 0
+			feedparser.SANITIZE_HTML = 0
+			# Microformat support (removed in 5.3) tends to return
+			# poor-quality data, and relies on BeautifulSoup which
+			# is unable to parse many feeds.
+			feedparser.PARSE_MICROFORMATS = 0
+
 		try:
-			result = feedparser.parse(url,
-				etag=self.etag,
-				modified=self.modified,
-				agent=HTTP_AGENT,
-				handlers=handlers)
-		except Exception, e:
-			result = {
-				"rawdog_exception": e,
-				"rawdog_traceback": sys.exc_info()[2],
-				}
+			result = feedparser.parse(url, **parse_args)
+
+			# Older versions of feedparser return some kinds of
+			# download errors in bozo_exception rather than raising
+			# them from feedparser.parse. Normalise this.
+			e = result.get("bozo_exception")
+			if is_timeout_exception(e):
+				result = {"rawdog_timeout": e}
+			elif isinstance(e, six.moves.urllib.error.URLError):
+				result = {"rawdog_exception": e}
+		except Exception as e:
+			if is_timeout_exception(e):
+				result = {"rawdog_timeout": e}
+			else:
+				result = {
+					"rawdog_exception": e,
+					"rawdog_traceback": sys.exc_info()[2],
+					}
 		result["rawdog_responses"] = logger.get_log()
+
+		# For compatibility with old hooks, include an empty "feed"
+		# if a timeout occurred.
+		if "rawdog_timeout" in result:
+			result["feed"] = []
+
 		return result
 
 	def update(self, rawdog, now, config, articles, p):
@@ -525,15 +572,6 @@ class Feed:
 		fatal = False
 		old_url = self.url
 
-		if "rawdog_exception" in p:
-			errors.append("Error fetching or parsing feed:")
-			errors.append(str(p["rawdog_exception"]))
-			if config["showtracebacks"]:
-				from traceback import format_tb
-				errors.append("".join(format_tb(p["rawdog_traceback"])))
-			errors.append("")
-			fatal = True
-
 		if len(responses) != 0 and responses[0]["status"] == 301:
 			# Permanent redirect(s). Find the new location.
 			i = 0
@@ -549,7 +587,7 @@ class Feed:
 			# it liberally.
 			valid_uri = True
 			if location is not None:
-				parsed = urlparse.urlparse(location)
+				parsed = six.moves.urllib.parse.urlparse(location)
 				if parsed.scheme == "" or parsed.netloc == "":
 					valid_uri = False
 
@@ -567,23 +605,21 @@ class Feed:
 					errors.append("You should update its entry in your config file.")
 			errors.append("")
 
-		bozo_exception = p.get("bozo_exception")
-		got_urlerror = isinstance(bozo_exception, urllib2.URLError)
-		got_timeout = isinstance(bozo_exception, socket.timeout)
-		if got_urlerror or got_timeout:
-			# urllib2 reported an error when fetching the feed.
-			# Check to see if it was a timeout.
-			if not (got_timeout or is_timeout_exception(bozo_exception)):
-				errors.append("Error while fetching feed:")
-				errors.append(str(bozo_exception))
-				errors.append("")
-				fatal = True
-			elif config["ignoretimeouts"]:
+		if "rawdog_timeout" in p:
+			if config["ignoretimeouts"]:
 				return False
 			else:
 				errors.append("Timeout while reading feed.")
 				errors.append("")
 				fatal = True
+		elif "rawdog_exception" in p:
+			errors.append("Error fetching or parsing feed:")
+			errors.append(str(p["rawdog_exception"]))
+			if config["showtracebacks"] and "rawdog_traceback" in p:
+				from traceback import format_tb
+				errors.append("".join(format_tb(p["rawdog_traceback"])))
+			errors.append("")
+			fatal = True
 		elif last_status == 304:
 			# The feed hasn't changed. Return False to indicate
 			# that we shouldn't do expiry.
@@ -614,11 +650,11 @@ class Feed:
 		call_hook("feed_fetched", rawdog, config, self, p, old_error, not fatal)
 
 		if len(errors) != 0:
-			print >>sys.stderr, "Feed:        " + old_url
+			config.warn("Feed:        ", old_url)
 			if last_status != 0:
-				print >>sys.stderr, "HTTP Status: " + str(last_status)
+				config.warn("HTTP Status: ", last_status)
 			for line in errors:
-				print >>sys.stderr, line
+				config.warn(line)
 			if fatal:
 				return False
 
@@ -641,7 +677,7 @@ class Feed:
 		article_ids = {}
 		if config["useids"]:
 			# Find IDs for existing articles.
-			for (hash, a) in articles.items():
+			for (hash, a) in list(articles.items()):
 				id = a.entry_info.get("id")
 				if a.feed == feed and id is not None:
 					article_ids[id] = a
@@ -673,16 +709,16 @@ class Feed:
 				call_hook("article_added", rawdog, config, article, now)
 
 		if config["currentonly"]:
-			for (hash, a) in articles.items():
+			for (hash, a) in list(articles.items()):
 				if a.feed == feed and hash not in seen_articles:
 					del articles[hash]
 
 		return True
 
 	def get_html_name(self, config):
-		if self.feed_info.has_key("title_detail"):
+		if "title_detail" in self.feed_info:
 			r = detail_to_html(self.feed_info["title_detail"], True, config)
-		elif self.feed_info.has_key("link"):
+		elif "link" in self.feed_info:
 			r = string_to_html(self.feed_info["link"], config)
 		else:
 			r = string_to_html(self.url, config)
@@ -692,13 +728,13 @@ class Feed:
 
 	def get_html_link(self, config):
 		s = self.get_html_name(config)
-		if self.feed_info.has_key("link"):
+		if "link" in self.feed_info:
 			return '<a href="' + string_to_html(self.feed_info["link"], config) + '">' + s + '</a>'
 		else:
 			return s
 
 	def get_id(self, config):
-		if self.args.has_key("id"):
+		if "id" in self.args:
 			return self.args["id"]
 		else:
 			r = self.get_html_name(config).lower()
@@ -744,14 +780,14 @@ class Article:
 
 		add_hash(self.feed)
 		entry_info = self.entry_info
-		if entry_info.has_key("title"):
+		if "title" in entry_info:
 			add_hash(entry_info["title"])
-		if entry_info.has_key("link"):
+		if "link" in entry_info:
 			add_hash(entry_info["link"])
-		if entry_info.has_key("content"):
+		if "content" in entry_info:
 			for content in entry_info["content"]:
 				add_hash(content["value"])
-		if entry_info.has_key("summary_detail"):
+		if "summary_detail" in entry_info:
 			add_hash(entry_info["summary_detail"]["value"])
 
 		return h.hexdigest()
@@ -783,15 +819,15 @@ class DayWriter:
 		self.config = config
 
 	def start_day(self, tm):
-		print >>self.file, '<div class="day">'
+		self.file.write('<div class="day">\n')
 		day = safe_ftime(self.config["dayformat"], tm)
-		print >>self.file, '<h2>' + day + '</h2>'
+		self.file.write('<h2>' + day + '</h2>\n')
 		self.counter += 1
 
 	def start_time(self, tm):
-		print >>self.file, '<div class="time">'
+		self.file.write('<div class="time">\n')
 		clock = safe_ftime(self.config["timeformat"], tm)
-		print >>self.file, '<h3>' + clock + '</h3>'
+		self.file.write('<h3>' + clock + '</h3>\n')
 		self.counter += 1
 
 	def time(self, s):
@@ -813,7 +849,7 @@ class DayWriter:
 
 	def close(self, n=0):
 		while self.counter > n:
-			print >>self.file, "</div>"
+			self.file.write('</div>\n')
 			self.counter -= 1
 
 def parse_time(value, default="m"):
@@ -828,7 +864,7 @@ def parse_time(value, default="m"):
 		"d": 86400,
 		"w": 604800,
 		}
-	for unit, size in units.items():
+	for unit, size in list(units.items()):
 		if value.endswith(unit):
 			return int(value[:-len(unit)]) * size
 	return int(value) * units[default]
@@ -862,7 +898,7 @@ def parse_feed_args(argparams, arglines):
 		if len(ps) != 2:
 			raise ConfigError("Bad argument line in config: " + p)
 		args[ps[0]] = ps[1]
-	for name, value in args.items():
+	for name, value in list(args.items()):
 		if name == "allowduplicates":
 			args[name] = parse_bool(value)
 		elif name == "keepmin":
@@ -951,12 +987,7 @@ class Config:
 		lines = []
 		try:
 			f = open(filename, "r")
-			for line in f.xreadlines():
-				try:
-					line = line.decode(get_system_encoding())
-				except UnicodeDecodeError, e:
-					raise ConfigError("Character encoding problem in config file: " + filename + ": " + str(e))
-
+			for line in f:
 				stripped = line.strip()
 				if stripped == "" or stripped[0] == "#":
 					continue
@@ -1080,24 +1111,29 @@ class Config:
 		if arglines != [] and not handled_arglines:
 			raise ConfigError("Bad argument lines in config after: " + line)
 
+	def warn(self, *args):
+		"""Print a warning message to stderr (even in non-verbose
+		mode)."""
+		with self.loglock:
+			sys.stderr.write("".join(map(str, args)) + "\n")
+
 	def log(self, *args):
 		"""Print a status message. If running in verbose mode, write
 		the message to stderr; if using a logfile, write it to the
 		logfile."""
 		if self["verbose"]:
-			with self.loglock:
-				print >>sys.stderr, "".join(map(str, args))
+			self.warn(*args)
 		if self.logfile is not None:
 			with self.loglock:
-				print >>self.logfile, "".join(map(str, args))
+				self.logfile.write("".join(map(str, args)) + "\n")
 				self.logfile.flush()
 
 	def bug(self, *args):
 		"""Report detection of a bug in rawdog."""
-		print >>sys.stderr, "Internal error detected in rawdog:"
-		print >>sys.stderr, "".join(map(str, args))
-		print >>sys.stderr, "This could be caused by a bug in rawdog itself or in a plugin."
-		print >>sys.stderr, "Please send this error message and your config file to the rawdog author."
+		self.warn("Internal error detected in rawdog:")
+		self.warn(*args)
+		self.warn("This could be caused by a bug in rawdog itself or in a plugin.")
+		self.warn("Please send this error message and your config file to the rawdog author.")
 
 def edit_file(filename, editfunc):
 	"""Edit a file in place: for each line in the input file, call
@@ -1123,17 +1159,17 @@ class AddFeedEditor:
 
 def add_feed(filename, url, rawdog, config):
 	"""Try to add a feed to the config file."""
-	feeds = rawdoglib.feedscanner.feeds(url)
+	feeds = rawdoglib.feedscanner.feeds(url, agent=HTTP_AGENT)
 	if feeds == []:
-		print >>sys.stderr, "Cannot find any feeds in " + url
+		config.warn("Cannot find any feeds in ", url)
 		return
 
 	feed = feeds[0]
 	if feed in rawdog.feeds:
-		print >>sys.stderr, "Feed " + feed + " is already in the config file"
+		config.warn("Feed ", feed, " is already in the config file")
 		return
 
-	print >>sys.stderr, "Adding feed " + feed
+	config.warn("Adding feed ", feed)
 	feedline = "feed %s %s\n" % (config["newfeedperiod"], feed)
 	edit_file(filename, AddFeedEditor(feedline).edit)
 
@@ -1142,7 +1178,7 @@ class ChangeFeedEditor:
 		self.oldurl = oldurl
 		self.newurl = newurl
 	def edit(self, inputfile, outputfile):
-		for line in inputfile.xreadlines():
+		for line in inputfile:
 			ls = line.strip().split(None)
 			if len(ls) > 2 and ls[0] == "feed" and ls[2] == self.oldurl:
 				line = line.replace(self.oldurl, self.newurl, 1)
@@ -1173,9 +1209,9 @@ class RemoveFeedEditor:
 def remove_feed(filename, url, config):
 	"""Try to remove a feed from the config file."""
 	if url not in [f[0] for f in config["feedslist"]]:
-		print >>sys.stderr, "Feed " + url + " is not in the config file"
+		config.warn("Feed ", url, " is not in the config file")
 	else:
-		print >>sys.stderr, "Removing feed " + url
+		config.warn("Removing feed ", url)
 		edit_file(filename, RemoveFeedEditor(url).edit)
 
 class FeedFetcher:
@@ -1264,8 +1300,8 @@ class Rawdog(Persistable):
 	def change_feed_url(self, oldurl, newurl, config, error_fn):
 		"""Change the URL of a feed."""
 
-		assert self.feeds.has_key(oldurl)
-		if self.feeds.has_key(newurl):
+		assert oldurl in self.feeds
+		if newurl in self.feeds:
 			error_fn("Error: New feed URL is already subscribed; please remove the old one")
 			error_fn("from the config file by hand.")
 			return
@@ -1284,11 +1320,11 @@ class Rawdog(Persistable):
 			feedstate_p = persister.get(FeedState, old_state)
 			feedstate_p.rename(feed.get_state_filename())
 			with feedstate_p as feedstate:
-				for article in feedstate.articles.values():
+				for article in list(feedstate.articles.values()):
 					article.feed = newurl
 				feedstate.modified()
 		else:
-			for article in self.articles.values():
+			for article in list(self.articles.values()):
 				if article.feed == oldurl:
 					article.feed = newurl
 
@@ -1296,13 +1332,13 @@ class Rawdog(Persistable):
 
 	def list(self, config):
 		"""List the configured feeds."""
-		for url, feed in self.feeds.items():
+		for url, feed in list(self.feeds.items()):
 			feed_info = feed.feed_info
-			print url
-			print "  ID:", feed.get_id(config)
-			print "  Hash:", short_hash(url)
-			print "  Title:", feed.get_html_name(config)
-			print "  Link:", feed_info.get("link")
+			print(url)
+			print("  ID:", feed.get_id(config))
+			print("  Hash:", short_hash(url))
+			print("  Title:", feed.get_html_name(config))
+			print("  Link:", feed_info.get("link"))
 
 	def sync_from_config(self, config):
 		"""Update rawdog's internal state to match the
@@ -1329,10 +1365,10 @@ class Rawdog(Persistable):
 		elif u != config["splitstate"]:
 			if config["splitstate"]:
 				config.log("Converting to split state files")
-				for feed_hash, feed in self.feeds.items():
+				for feed_hash, feed in list(self.feeds.items()):
 					with persister.get(FeedState, feed.get_state_filename()) as feedstate:
 						feedstate.articles = {}
-						for article_hash, article in self.articles.items():
+						for article_hash, article in list(self.articles.items()):
 							if article.feed == feed_hash:
 								feedstate.articles[article_hash] = article
 						feedstate.modified()
@@ -1340,9 +1376,9 @@ class Rawdog(Persistable):
 			else:
 				config.log("Converting to single state file")
 				self.articles = {}
-				for feed_hash, feed in self.feeds.items():
+				for feed_hash, feed in list(self.feeds.items()):
 					with persister.get(FeedState, feed.get_state_filename()) as feedstate:
-						for article_hash, article in feedstate.articles.items():
+						for article_hash, article in list(feedstate.articles.items()):
 							self.articles[article_hash] = article
 						feedstate.articles = {}
 						feedstate.modified()
@@ -1353,7 +1389,7 @@ class Rawdog(Persistable):
 		seen_feeds = set()
 		for (url, period, args) in config["feedslist"]:
 			seen_feeds.add(url)
-			if not self.feeds.has_key(url):
+			if url not in self.feeds:
 				config.log("Adding new feed: ", url)
 				self.feeds[url] = Feed(url)
 				self.modified()
@@ -1369,13 +1405,13 @@ class Rawdog(Persistable):
 				config.log("Changed feed options: ", url)
 				feed.args = newargs
 				self.modified()
-		for url in self.feeds.keys():
+		for url in list(self.feeds.keys()):
 			if url not in seen_feeds:
 				config.log("Removing feed: ", url)
 				if config["splitstate"]:
 					persister.delete(self.feeds[url].get_state_filename())
 				else:
-					for key, article in self.articles.items():
+					for key, article in list(self.articles.items()):
 						if article.feed == url:
 							del self.articles[key]
 				del self.feeds[url]
@@ -1390,14 +1426,14 @@ class Rawdog(Persistable):
 		socket.setdefaulttimeout(config["timeout"])
 
 		if feedurl is None:
-			update_feeds = [url for url in self.feeds.keys()
+			update_feeds = [url for url in list(self.feeds.keys())
 			                    if self.feeds[url].needs_update(now)]
-		elif self.feeds.has_key(feedurl):
+		elif feedurl in self.feeds:
 			update_feeds = [feedurl]
 			self.feeds[feedurl].etag = None
 			self.feeds[feedurl].modified = None
 		else:
-			print "No such feed: " + feedurl
+			config.warn("No such feed: ", feedurl)
 			update_feeds = []
 
 		numfeeds = len(update_feeds)
@@ -1412,13 +1448,13 @@ class Rawdog(Persistable):
 			articles were expired."""
 
 			feedcounts = {}
-			for key, article in articles.items():
+			for key, article in list(articles.items()):
 				url = article.feed
 				feedcounts[url] = feedcounts.get(url, 0) + 1
 
 			expiry_list = []
 			feedcounts = {}
-			for key, article in articles.items():
+			for key, article in list(articles.items()):
 				url = article.feed
 				feedcounts[url] = feedcounts.get(url, 0) + 1
 				expiry_list.append((article.added, article.sequence, key, article))
@@ -1433,7 +1469,7 @@ class Rawdog(Persistable):
 					del articles[key]
 					continue
 				if (url in seen_some_items
-				    and self.feeds.has_key(url)
+				    and url in self.feeds
 				    and article.can_expire(now, config)
 				    and feedcounts[url] > self.feeds[url].get_keepmin(config)):
 					call_hook("article_expired", self, config, article, now)
@@ -1482,10 +1518,6 @@ class Rawdog(Persistable):
 
 	def get_template(self, config, name="page"):
 		"""Return the contents of a template."""
-
-		filename = config.get(name + "template", "default")
-		if filename != "default":
-			return load_file(filename)
 
 		if name == "page":
 			template = """<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
@@ -1560,9 +1592,9 @@ __feeditems__
 	def show_template(self, name, config):
 		"""Show the contents of a template, as currently configured."""
 		try:
-			print self.get_template(config, name),
+			sys.stdout.write(self.get_template(config, name))
 		except KeyError:
-			print >>sys.stderr, "Unknown template name: " + name
+			config.warn("Unknown template name: ", name)
 
 	def write_article(self, f, article, config):
 		"""Write an article to the given file."""
@@ -1578,7 +1610,7 @@ __feeditems__
 			guid = None
 
 		itembits = self.get_feed_bits(config, feed)
-		for name, value in feed.args.items():
+		for name, value in list(feed.args.items()):
 			if name.startswith("define_"):
 				itembits[name[7:]] = sanitise_html(value, "", True, config)
 
@@ -1586,7 +1618,7 @@ __feeditems__
 
 		key = None
 		for k in ["content", "summary_detail"]:
-			if entry_info.has_key(k):
+			if k in entry_info:
 				key = k
 				break
 		if key is None:
@@ -1691,7 +1723,7 @@ __feeditems__
 		bits["feed_title"] = feed.get_html_link(config)
 		bits["feed_title_no_link"] = detail_to_html(feed.feed_info.get("title_detail"), True, config)
 		bits["feed_url"] = string_to_html(feed.url, config)
-		bits["feed_icon"] = '<a class="xmlbutton" href="' + cgi.escape(feed.url) + '">XML</a>'
+		bits["feed_icon"] = '<a class="xmlbutton" href="' + html.escape(feed.url) + '">XML</a>'
 		bits["feed_last_update"] = format_time(feed.last_update, config)
 		bits["feed_next_update"] = format_time(feed.last_update + feed.period, config)
 		return bits
@@ -1706,8 +1738,8 @@ __feeditems__
 		bits = {}
 
 		feeds = [(feed.get_html_name(config).lower(), feed)
-		         for feed in self.feeds.values()]
-		feeds.sort()
+		         for feed in list(self.feeds.values())]
+		feeds.sort(key=lambda x: x[0])
 
 		feeditems = StringIO()
 		for key, feed in feeds:
@@ -1724,7 +1756,7 @@ __feeditems__
 		bits.update(config["defines"])
 
 		refresh = min([config["expireage"]]
-		              + [feed.period for feed in self.feeds.values()])
+		              + [feed.period for feed in list(self.feeds.values())])
 		bits["refresh"] = '<meta http-equiv="Refresh" content="' + str(refresh) + '">'
 
 		f = StringIO()
@@ -1773,10 +1805,10 @@ __feeditems__
 		now = time.time()
 
 		def list_articles(articles):
-			return [(-a.get_sort_date(config), a.feed, a.sequence, a.hash) for a in articles.values()]
+			return [(-a.get_sort_date(config), a.feed, a.sequence, a.hash) for a in list(articles.values())]
 		if config["splitstate"]:
 			article_list = []
-			for feed in self.feeds.values():
+			for feed in list(self.feeds.values()):
 				with persister.get(FeedState, feed.get_state_filename()) as feedstate:
 					article_list += list_articles(feedstate.articles)
 		else:
@@ -1802,7 +1834,7 @@ __feeditems__
 				wanted.setdefault(feed_url, []).append(hash)
 
 			found = {}
-			for (feed_url, article_hashes) in wanted.items():
+			for (feed_url, article_hashes) in list(wanted.items()):
 				feed = self.feeds[feed_url]
 				with persister.get(FeedState, feed.get_state_filename()) as feedstate:
 					for hash in article_hashes:
@@ -1834,7 +1866,7 @@ __feeditems__
 
 def usage():
 	"""Display usage information."""
-	print """rawdog, version """ + VERSION + """
+	print("""rawdog, version """ + VERSION + """
 Usage: rawdog [OPTION]...
 
 General options (use only once):
@@ -1858,9 +1890,10 @@ Actions (performed in order given):
 
 Special actions (all other options are ignored if one of these is specified):
 --dump URL                   Show what rawdog's parser returns for URL
+--find URL                   Show what rawdog's feed finder returns for URL
 --help                       Display this help and exit
 
-Report bugs to <ats@offog.org>."""
+Report bugs to <ats@offog.org>.""")
 
 def main(argv):
 	"""The command-line interface to the aggregator."""
@@ -1879,6 +1912,7 @@ def main(argv):
 			"config=",
 			"dir=",
 			"dump=",
+			"find=",
 			"help",
 			"list",
 			"log=",
@@ -1894,8 +1928,8 @@ def main(argv):
 			"write",
 			]
 		(optlist, args) = getopt.getopt(argv, SHORTOPTS, LONGOPTS)
-	except getopt.GetoptError, s:
-		print s
+	except getopt.GetoptError as s:
+		print(s)
 		usage()
 		return 1
 
@@ -1916,6 +1950,13 @@ def main(argv):
 			import pprint
 			pprint.pprint(feedparser.parse(a, agent=HTTP_AGENT))
 			return 0
+		elif o == "--find":
+			feeds = rawdoglib.feedscanner.feeds(a, agent=HTTP_AGENT)
+			if len(feeds) == 0:
+				return 1
+			for url in feeds:
+				print(url)
+			return 0
 		elif o == "--help":
 			usage()
 			return 0
@@ -1930,13 +1971,13 @@ def main(argv):
 		elif o in ("-W", "--no-lock-wait"):
 			no_lock_wait = True
 	if statedir is None:
-		print "$HOME not set and state dir not explicitly specified; please use -d/--dir"
+		print("$HOME not set and state dir not explicitly specified; please use -d/--dir")
 		return 1
 
 	try:
 		os.chdir(statedir)
 	except OSError:
-		print "No " + statedir + " directory"
+		print("No " + statedir + " directory")
 		return 1
 
 	sys.path.append(".")
@@ -1945,9 +1986,9 @@ def main(argv):
 	def load_config(fn):
 		try:
 			config.load(fn)
-		except ConfigError, err:
-			print >>sys.stderr, "In " + fn + ":"
-			print >>sys.stderr, err
+		except ConfigError as err:
+			config.warn("In ", fn, ":")
+			config.warn(err)
 			return 1
 		if verbose:
 			config["verbose"] = True
@@ -1964,9 +2005,9 @@ def main(argv):
 	if rawdog is None:
 		return 0
 	if not rawdog.check_state_version():
-		print "The state file " + statedir + "/state was created by an older"
-		print "version of rawdog, and cannot be read by this version."
-		print "Removing the state file will fix it."
+		print("The state file " + statedir + "/state was created by an older")
+		print("version of rawdog, and cannot be read by this version.")
+		print("Removing the state file will fix it.")
 		return 1
 
 	rawdog.sync_from_config(config)
