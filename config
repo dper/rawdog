@@ -79,23 +79,6 @@ ignoretimeouts false
 # mostly useful for debugging rawdog or feedparser.
 showtracebacks false
 
-# Whether to display verbose status messages saying what rawdog's doing
-# while it runs. Specifying -v or --verbose on the command line is
-# equivalent to saying "verbose true" here.
-verbose true
-
-# Whether to attempt to fix bits of HTML that should start with a
-# block-level element (such as article descriptions) by prepending "<p>"
-# if they don't already start with a block-level element.
-blocklevelhtml true
-
-# Whether to attempt to turn feed-provided HTML into valid HTML.
-# The most common problem that this solves is a non-closed element in an
-# article causing formatting problems for the rest of the page.
-# For this option to have any effect, you need to have PyTidyLib or mx.Tidy
-# installed.
-tidyhtml true
-
 # Whether the articles displayed should be sorted first by the date
 # provided in the feed (useful for "planet" pages, where you're
 # displaying several feeds and want new articles to appear in the right
