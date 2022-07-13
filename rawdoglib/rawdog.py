@@ -940,14 +940,14 @@ class Config:
 			"dayformat" : "%A, %d %B %Y",
 			"timeformat" : "%I:%M %p",
 			"datetimeformat" : None,
-			"userefresh" : False,
+			"userefresh" : True,
 			"showfeeds" : True,
 			"timeout" : 30,
 			"pagetemplate" : "default",
 			"itemtemplate" : "default",
 			"feedlisttemplate" : "default",
 			"feeditemtemplate" : "default",
-			"verbose" : False,
+			"verbose" : True,
 			"ignoretimeouts" : False,
 			"showtracebacks" : False,
 			"daysections" : True,
@@ -1112,21 +1112,13 @@ class Config:
 			raise ConfigError("Bad argument lines in config after: " + line)
 
 	def warn(self, *args):
-		"""Print a warning message to stderr (even in non-verbose
-		mode)."""
+		"""Print a warning message to stderr."""
 		with self.loglock:
 			sys.stderr.write("".join(map(str, args)) + "\n")
 
 	def log(self, *args):
-		"""Print a status message. If running in verbose mode, write
-		the message to stderr; if using a logfile, write it to the
-		logfile."""
-		if self["verbose"]:
-			self.warn(*args)
-		if self.logfile is not None:
-			with self.loglock:
-				self.logfile.write("".join(map(str, args)) + "\n")
-				self.logfile.flush()
+		"""Print a status message to stderr.."""
+		self.warn(*args)
 
 	def bug(self, *args):
 		"""Report detection of a bug in rawdog."""
@@ -1872,14 +1864,12 @@ Usage: rawdog [OPTION]...
 General options (use only once):
 -d|--dir DIR                 Use DIR instead of ~/.rawdog
 -N, --no-locking             Do not lock the state file
--v, --verbose                Print more detailed status information
 -V|--log FILE                Append detailed status information to FILE
 -W, --no-lock-wait           Exit silently if state file is locked
 
 Actions (performed in order given):
 -a|--add URL                 Try to find a feed associated with URL and
                              add it to the config file
--c|--config FILE             Read additional config file FILE
 -f|--update-feed URL         Force an update on the single feed URL
 -l, --list                   List feeds known at time of last update
 -r|--remove URL              Remove feed URL from the config file
@@ -1924,7 +1914,6 @@ def main(argv):
 			"show-template",
 			"update",
 			"update-feed=",
-			"verbose",
 			"write",
 			]
 		(optlist, args) = getopt.getopt(argv, SHORTOPTS, LONGOPTS)
@@ -1941,7 +1930,7 @@ def main(argv):
 		statedir = os.environ["HOME"] + "/.rawdog"
 	else:
 		statedir = None
-	verbose = False
+	verbose = True
 	logfile_name = None
 	locking = True
 	no_lock_wait = False
@@ -1964,8 +1953,6 @@ def main(argv):
 			statedir = a
 		elif o in ("-N", "--no-locking"):
 			locking = False
-		elif o in ("-v", "--verbose"):
-			verbose = True
 		elif o in ("-V", "--log"):
 			logfile_name = a
 		elif o in ("-W", "--no-lock-wait"):
