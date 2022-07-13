@@ -5,47 +5,33 @@ Douglas Perkins <contact@dperkins.org>
 
 rawdog is a feed aggregator, capable of producing a personal "river of
 news" or a public "planet" page. It supports all common feed formats,
-including all versions of RSS and Atom. By default, it is run from cron,
-collects articles from a number of feeds, and generates a static HTML
-page listing the newest articles in date order. It supports per-feed
-customizable update times, and uses ETags, Last-Modified, gzip
-compression, and RFC3229+feed to minimize network bandwidth usage. Its
-behaviour is highly customisable using plugins written in Python.
+including RSS and Atom. It collects articles from a number of feeds
+and generates a static HTML page listing the newest articles in order.
 
 This version uses Python 3. In the switch from Python 2 to Python 3,
-some features were removed.
+many features were removed, including plugins and many options.
 
 Dependencies:
 
 - Python 3.10 or later
 - feedparser 6.0.8 or later
 
-This file is designed to be used in place.  For example, download it to
-your ~/src directory and run it from there using the "rawdog" command. 
-Typically, "rawdog -uwv" is what you want.
+This program is designed to run without installation.  For example,
+download it to your ~/src directory and run it from there using the
+"rawdog" command. Typically, "rawdog -uw"
 
 rawdog needs a config file to function. Make the directory ".rawdog" in
-your $HOME directory, copy the provided file "config" into that
-directory, and edit it to suit your preferences. Comments in that file
-describe what each of the options does.
+your $HOME directory, copy the provided "config" file into that
+directory, and edit it.
 
-You should copy the provided file "style.css" into the same directory
-that you've told rawdog to write its HTML output to. rawdog should be
-usable from a browser that doesn't support CSS, but it won't be very
-pretty.
+Copy the "style.css" file into the same directory as your html output.
+Adjust the style as you prefer.
 
 When you invoke rawdog from the command line, you give it a series of
 actions to perform -- for instance, "rawdog --update --write" tells it
-to do the "--update" action (downloading articles from feeds), then the
-"--write" action (writing the latest articles it knows about to the HTML
-file).
+to download articles from feeds and then write to the HTML file.
 
-For details of all rawdog's actions and command-line options, see the
-rawdog(1) man page -- "man rawdog" after installation.
-
-You will want to run "rawdog -uw" periodically to fetch data and write
-the output file. The easiest way to do this is to add a crontab entry
-that looks something like this:
+A cronjob entry such as the following is recommended:
 
 0,10,20,30,40,50 * * * *        /path/to/rawdog -uw
 
@@ -58,10 +44,8 @@ http_proxy=http://myproxy.mycompany.com:3128/
 at the top of your crontab should be appropriate. (The http_proxy
 variable will work for many other programs too.)
 
-In the event that rawdog gets horribly confused (for instance, if your
+In the event that rawdog gets horribly confused (for instance, if the
 system clock has a huge jump and it thinks it won't need to fetch
-anything for the next thirty years), you can forcibly clear its state by
+anything for the next thirty years), you can clear its state by
 removing the ~/.rawdog/state file (and the ~/.rawdog/feeds/*.state
 files, if you've got the "splitstate" option turned on).
-
-If you don't like the appearance, customise style.css.
