@@ -958,10 +958,10 @@ class Config:
 			"currentonly" : False,
 			"hideduplicates" : [],
 			"newfeedperiod" : "3h",
-			"changeconfig": False,
+			"changeconfig": True,
 			"numthreads": 4,
 			"splitstate": False,
-			"useids": False,
+			"useids": True,
 			}
 
 	def __getitem__(self, key):
