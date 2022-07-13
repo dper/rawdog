@@ -18,7 +18,7 @@ Dependencies:
 
 This program is designed to run without installation.  For example,
 download it to your ~/src directory and run it from there using the
-"rawdog" command. Typically, "rawdog -uw"
+"rawdog" command. Typically, "rawdog -uw".
 
 rawdog needs a config file to function. Make the directory ".rawdog" in
 your $HOME directory, copy the provided "config" file into that
