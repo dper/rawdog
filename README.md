@@ -22,7 +22,7 @@ This version uses Python 3. In the switch from Python 2 to Python 3, many featur
 
 A cronjob entry such as the following is recommended:
 
-    0,10,20,30,40,50 * * * *        /path/to/rawdog -uw
+    @hourly /path/to/rawdog -uw > /dev/null 2>&1
 
 If you want rawdog to fetch URLs through a proxy server, then set your `http_proxy` environment variable appropriately; depending on your version of cron, put something like this in your crontab:
 
