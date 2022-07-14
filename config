@@ -22,11 +22,10 @@ keepmin 20
 # Only display articles that are currently included in a feed.
 currentonly false
 
-# Divide the articles up by day, writing a "dayformat" heading between days.
+# Divide the articles up by day with a heading.
 daysections true
 
-# Whether to divide the articles up by time, writing a "timeformat" heading
-# before each set.
+# Whether to divide the articles up by time with a heading.
 timesections true
 
 # The output HTML file. Put style.css in the same directory.
@@ -44,12 +43,10 @@ timeout 30s
 ignoretimeouts false
 
 # Whether to show Python traceback messages. If this is true, rawdog will show
-# a traceback message if an exception is thrown while fetching a feed; this is
-# mostly useful for debugging rawdog or feedparser.
+# a traceback message if an exception is thrown while fetching a feed.
 showtracebacks false
 
-# Whether the articles displayed should be sorted first by the date
-# provided in the feed.
+# Whether the articles displayed are sorted first by the date in the feed.
 sortbyfeeddate false
 
 # The fields to use when detecting duplicate articles: "id" is the article's
