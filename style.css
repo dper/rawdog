@@ -11,13 +11,13 @@ h1 {
 	font-variant: small-caps;
 	border-bottom: 1px dashed black;
 }
-h2 {
+div.day h2 {
 	font-size: 1em;
 	margin: 0;
 	padding: 0;
 	color: gray;
 }
-h3 {
+div.time h3 {
 	font-size: 1em;
 	margin: 0;
 	padding: 0;
@@ -50,29 +50,29 @@ h3 {
 	margin: 0;
 	padding: 6px;
 }
-#feedstatsheader {
-}
 #feedstats {
+	border-top: 1px dotted black;
+	margin-top: 3em;
+	margin-bottom: 1em;
+	font-size: small;
 }
 #feeds {
-	margin: 10px 0;
-	border: 1px solid gray;
-	border-spacing: 0;
+	margin-left: auto;
+	margin-right: auto;
 }
 #feedsheader th {
-	background-color: #eee;
-	border-bottom: 1px solid gray;
-	padding: 5px;
-	margin: 0;
+	text-align: center;
 }
-.feedsrow td {
-	padding: 5px 10px;
-	margin: 0;
+tr.feedsrow td {
+	padding-left: 0.3em;
+	padding-right: 0.3em;
 }
 #footer {
+	font-size: small;
 	text-align: center;
 	border-top: 1px black dashed;
 	color: gray;
+	padding-top: 0.5em;
 }
 a.xmlbutton {
 	border: 1px solid;
