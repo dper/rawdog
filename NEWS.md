@@ -2,7 +2,7 @@
 
 Converted to Python 3 by Douglas Perkins. In the process, many things
 were removed. Some options are gone from the config. Plugins are not
-recognized. You can no longer build or install this program, but it
+recognized. You can no longer build this program, but it
 still works in place. Templates are no longer supported.
 
 - rawdog 2.24
