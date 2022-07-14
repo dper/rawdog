@@ -315,13 +315,11 @@ def load_file(name):
 	return file_cache[name]
 
 def write_ascii(f, s, config):
-	"""Write the string s, which should only contain ASCII characters, to
-	file f; if it isn't encodable in ASCII, then print a warning message
-	and write UTF-8."""
+	"""Write the string s, which should only contain ASCII characters."""
 	try:
 		f.write(s)
 	except UnicodeEncodeError as e:
-		config.bug("Error encoding output as ASCII; UTF-8 has been written instead.\n", e)
+		print("Error encoding output as ASCII; UTF-8 has been written instead.\n", e)
 		f.write(s.encode("UTF-8"))
 
 def short_hash(s):
@@ -603,8 +601,7 @@ class Feed:
 			# that we shouldn't do expiry.
 			return False
 		elif last_status in [403, 410]:
-			# The feed is disallowed or gone. The feed should be
-			# unsubscribed.
+			# The feed is disallowed or gone.
 			errors.append("The feed has gone.")
 			errors.append("You should remove it from your config file.")
 			errors.append("")
@@ -617,8 +614,7 @@ class Feed:
 			errors.append("")
 			fatal = True
 		elif version == "" and len(p.get("entries", [])) == 0:
-			# feedparser couldn't detect the type of this feed or
-			# retrieve any entries from it.
+			# feedparser couldn't detect the type of this feed.
 			errors.append("The data retrieved from this URL could not be understood as a feed.")
 			errors.append("You should check whether the feed has changed URLs or been removed.")
 			errors.append("")
@@ -628,16 +624,15 @@ class Feed:
 		call_hook("feed_fetched", rawdog, config, self, p, old_error, not fatal)
 
 		if len(errors) != 0:
-			config.warn("Feed:        ", old_url)
+			print("Feed:        ", old_url)
 			if last_status != 0:
-				config.warn("HTTP Status: ", last_status)
+				print("HTTP Status: ", last_status)
 			for line in errors:
-				config.warn(line)
+				print(line)
 			if fatal:
 				return False
 
-		# From here, we can assume that we've got a complete feedparser
-		# response.
+		# From here, we assume a complete feedparser response.
 
 		p = ensure_unicode(p, p.get("encoding") or "UTF-8")
 
@@ -749,9 +744,7 @@ class Article:
 	def compute_initial_hash(self):
 		"""Compute an initial unique hash for an article.
 		The generated hash must be unique amongst all articles in the
-		system (i.e. it can't just be the article ID, because that
-		would collide if more than one feed included the same
-		article)."""
+		system."""
 		h = hashlib.sha1()
 		def add_hash(s):
 			h.update(s.encode("UTF-8"))
@@ -984,8 +977,7 @@ class Config:
 		elif len(l) != 2:
 			raise ConfigError("Bad line in config: " + line)
 
-		# Load template files immediately, so we produce an error now
-		# rather than later if anything goes wrong.
+		# Load template files immediately, so errors show up early.
 		if l[0].endswith("template") and l[1] != "default":
 			load_file(l[1])
 
@@ -1079,22 +1071,6 @@ class Config:
 		if arglines != [] and not handled_arglines:
 			raise ConfigError("Bad argument lines in config after: " + line)
 
-	def warn(self, *args):
-		"""Print a warning message to stderr."""
-		with self.loglock:
-			sys.stderr.write("".join(map(str, args)) + "\n")
-
-	def log(self, *args):
-		"""Print a status message to stderr.."""
-		self.warn(*args)
-
-	def bug(self, *args):
-		"""Report detection of a bug in rawdog."""
-		self.warn("Internal error detected in rawdog:")
-		self.warn(*args)
-		self.warn("This could be caused by a bug in rawdog itself or in a plugin.")
-		self.warn("Please send this error message and your config file to the rawdog author.")
-
 def edit_file(filename, editfunc):
 	"""Edit a file in place: for each line in the input file, call
 	editfunc(line, outputfile), then rename the output file over the input
@@ -1140,7 +1116,7 @@ class FeedFetcher:
 					# No jobs left.
 					break
 
-			config.log("[", num, "] Fetching feed: ", job)
+			print("[", num, "] Fetching feed:", job)
 			feed = rawdog.feeds[job]
 			call_hook("pre_update_feed", rawdog, config, feed)
 			result = feed.fetch(rawdog, config)
@@ -1152,8 +1128,7 @@ class FeedFetcher:
 		max_workers = max(max_workers, 1)
 		num_workers = min(max_workers, len(self.jobs))
 
-		self.config.log("Fetching ", len(self.jobs), " feeds using ",
-		                num_workers, " threads")
+		print("Fetching", len(self.jobs), "feeds using", num_workers, "threads.")
 		workers = []
 		for i in range(1, num_workers):
 			t = threading.Thread(target=self.worker, args=(i,))
@@ -1162,7 +1137,7 @@ class FeedFetcher:
 		self.worker(0)
 		for worker in workers:
 			worker.join()
-		self.config.log("Fetch complete")
+		print("Fetch complete.")
 		return self.results
 
 class FeedState(Persistable):
@@ -1267,7 +1242,7 @@ class Rawdog(Persistable):
 			self.using_splitstate = config["splitstate"]
 		elif u != config["splitstate"]:
 			if config["splitstate"]:
-				config.log("Converting to split state files")
+				print("Converting to split state files")
 				for feed_hash, feed in list(self.feeds.items()):
 					with persister.get(FeedState, feed.get_state_filename()) as feedstate:
 						feedstate.articles = {}
@@ -1277,7 +1252,7 @@ class Rawdog(Persistable):
 						feedstate.modified()
 				self.articles = {}
 			else:
-				config.log("Converting to single state file")
+				print("Converting to single state file")
 				self.articles = {}
 				for feed_hash, feed in list(self.feeds.items()):
 					with persister.get(FeedState, feed.get_state_filename()) as feedstate:
@@ -1293,24 +1268,24 @@ class Rawdog(Persistable):
 		for (url, period, args) in config["feedslist"]:
 			seen_feeds.add(url)
 			if url not in self.feeds:
-				config.log("Adding new feed: ", url)
+				print("Adding new feed: ", url)
 				self.feeds[url] = Feed(url)
 				self.modified()
 			feed = self.feeds[url]
 			if feed.period != period:
-				config.log("Changed feed period: ", url)
+				print("Changed feed period: ", url)
 				feed.period = period
 				self.modified()
 			newargs = {}
 			newargs.update(config["feeddefaults"])
 			newargs.update(args)
 			if feed.args != newargs:
-				config.log("Changed feed options: ", url)
+				print("Changed feed options: ", url)
 				feed.args = newargs
 				self.modified()
 		for url in list(self.feeds.keys()):
 			if url not in seen_feeds:
-				config.log("Removing feed: ", url)
+				print("Removing feed: ", url)
 				if config["splitstate"]:
 					persister.delete(self.feeds[url].get_state_filename())
 				else:
@@ -1321,9 +1296,8 @@ class Rawdog(Persistable):
 				self.modified()
 
 	def update(self, config, feedurl=None):
-		"""Perform the update action: check feeds for new articles, and
-		expire old ones."""
-		config.log("Starting update")
+		"""Check feeds for new articles and expire old ones."""
+		print("Updating...")
 		now = time.time()
 
 		socket.setdefaulttimeout(config["timeout"])
@@ -1336,11 +1310,11 @@ class Rawdog(Persistable):
 			self.feeds[feedurl].etag = None
 			self.feeds[feedurl].modified = None
 		else:
-			config.warn("No such feed: ", feedurl)
+			print("No such feed: ", feedurl)
 			update_feeds = []
 
 		numfeeds = len(update_feeds)
-		config.log("Will update ", numfeeds, " feeds")
+		print("Will update", numfeeds, "feeds.")
 
 		fetcher = FeedFetcher(self, update_feeds, config)
 		fetched = fetcher.run(config["numthreads"])
@@ -1367,7 +1341,7 @@ class Rawdog(Persistable):
 			for date, seq, key, article in expiry_list:
 				url = article.feed
 				if url not in self.feeds:
-					config.log("Expired article for nonexistent feed: ", url)
+					print("Expired article for nonexistent feed: ", url)
 					count += 1
 					del articles[key]
 					continue
@@ -1379,14 +1353,14 @@ class Rawdog(Persistable):
 					count += 1
 					feedcounts[url] -= 1
 					del articles[key]
-			config.log("Expired ", count, " articles, leaving ", len(articles))
+			print("Expired", count, "articles, leaving", len(articles))
 
 			return count > 0
 
 		count = 0
 		for url in update_feeds:
 			count += 1
-			config.log("Updating feed ", count, " of ", numfeeds, ": ", url)
+			print("Updating feed ", count, " of ", numfeeds, ": ", url)
 			feed = self.feeds[url]
 
 			if config["splitstate"]:
@@ -1417,7 +1391,6 @@ class Rawdog(Persistable):
 			do_expiry(self.articles)
 
 		self.modified()
-		config.log("Finished update")
 
 	def get_template(self, config, name="page"):
 		"""Return the contents of a template."""
@@ -1689,16 +1662,15 @@ __feeditems__
 		if outputfile == "-":
 			write_ascii(sys.stdout, s, config)
 		else:
-			config.log("Writing output file: ", outputfile)
+			print("Writing output file:", outputfile)
 			f = open(outputfile + ".new", "w")
 			write_ascii(f, s, config)
 			f.close()
 			os.rename(outputfile + ".new", outputfile)
 
 	def write(self, config):
-		"""Perform the write action: write articles to the output
-		file."""
-		config.log("Starting write")
+		"""Write articles to the output file."""
+		print("Writing...")
 		now = time.time()
 
 		def list_articles(articles):
@@ -1754,12 +1726,10 @@ __feeditems__
 		else:
 			dup_count = 0
 
-		config.log("Selected ", len(articles), " of ", numarticles, " articles to write; ignored ", dup_count, " duplicates")
+		print("Selected", len(articles), "of", numarticles, "articles. Ignored", dup_count, "duplicates.")
 
 		if not call_hook("output_write_files", self, config, articles, article_dates):
 			self.write_output_file(articles, article_dates, config)
-
-		config.log("Finished write")
 
 def usage():
 	"""Display usage information."""
@@ -1846,8 +1816,8 @@ def main(argv):
 		try:
 			config.load(fn)
 		except ConfigError as err:
-			config.warn("In ", fn, ":")
-			config.warn(err)
+			print("In ", fn, ":")
+			print(err)
 			return 1
 		if verbose:
 			config["verbose"] = True

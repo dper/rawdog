@@ -1,5 +1,5 @@
 # persister: persist Python objects safely to pickle files
-# Copyright 2003, 2004, 2005, 2013, 2014 Adam Sampson <ats@offog.org>
+# Copyright 2003-2014 Adam Sampson <ats@offog.org>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -13,9 +13,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-
-
 
 import six.moves.cPickle as pickle
 import errno
@@ -117,7 +114,7 @@ class Persisted:
 		return True
 
 	def _open(self, no_block):
-		self.persister.log("Loading state file: ", self.filename)
+		print("Loading state file.")
 
 		if not self._get_lock(no_block):
 			return None
@@ -145,7 +142,7 @@ class Persisted:
 			return
 
 		if self.object.is_modified():
-			self.persister.log("Saving state file: ", self.filename)
+			print("Saving state file.")
 			newname = "%s.new-%d" % (self.filename, os.getpid())
 			newfile = open(newname, "wb")
 			pickle.dump(self.object, newfile, pickle.HIGHEST_PROTOCOL)
@@ -161,7 +158,6 @@ class Persister:
 
 	def __init__(self, config):
 		self.files = {}
-		self.log = config.log
 		self.use_locking = config.locking
 
 	def get(self, klass, filename):
