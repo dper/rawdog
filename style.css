@@ -6,7 +6,7 @@ body {
 	max-width: 70em;
 	text-align: justify;
 }
-h1 {
+#header h1 {
 	text-align: center;
 	font-variant: small-caps;
 	border-bottom: 1px dashed black;
@@ -23,29 +23,30 @@ div.time h3 {
 	padding: 0;
 	color: gray;
 }
-.day {
+div.day {
 	clear: both;
 }
-.time {
+div.time {
 	clear: both;
 }
-.item {
-	margin: 20px 30px;
+div.item {
+	margin-top: 1em;
+	margin-bottom: 1em;
 	border: 1px solid gray;
 	clear: both;
 }
-.itemheader {
+p.itemheader {
 	padding: 6px;
 	margin: 0;
 	background-color: #eee;
 }
-.itemtitle {
+span.itemtitle {
 	font-weight: bold;
 }
-.itemfrom {
+span.itemfrom {
 	font-style: italic;
 }
-.itemdescription {
+div.itemdescription {
 	border-top: 1px solid gray;
 	margin: 0;
 	padding: 6px;
