@@ -918,11 +918,7 @@ class Config:
 		self.reset()
 
 	def reset(self):
-		# Note that these default values are *not* the same as
-		# in the supplied config file. The idea is that someone
-		# who has an old config file shouldn't notice a difference
-		# in behaviour on upgrade -- so new options generally
-		# default to False here, and True in the sample file.
+		# The config file can override some of these.
 		self.config = {
 			"feedslist" : [],
 			"feeddefaults" : {},
@@ -967,12 +963,6 @@ class Config:
 
 	def __setitem__(self, key, value):
 		self.config[key] = value
-
-	def reload(self):
-		self.log("Reloading config files")
-		self.reset()
-		for filename in self.files_loaded:
-			self.load(filename, False)
 
 	def load(self, filename, explicitly_loaded=True):
 		"""Load configuration from a config file."""
@@ -1462,10 +1452,11 @@ class Rawdog(Persistable):
 """
 			template += """    <link rel="stylesheet" href="style.css" type="text/css">
     <title>rawdog</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon" />
 </head>
 <body id="rawdog">
 <div id="header">
-<h1>rawdog</h1>
+<h1>News</h1>
 </div>
 <div id="items">
 __items__
