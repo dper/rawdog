@@ -1,14 +1,16 @@
-# rawdog 3.0
+# NEWS
+
+## rawdog 3.0
 
 Converted to Python 3 by Douglas Perkins. In the process, many things were removed. Some options are gone from the config. Plugins are not recognized. You can no longer build this program, but it still works in place. Templates are no longer supported.
 
-# rawdog 2.24
+## rawdog 2.24
 
 feedscanner now sets User-Agent explicitly, so `rawdog --add/--find` use rawdog's User-Agent rather than the default one. As some blogging services block requests with the default Python User-Agent, this makes scanning a bit more effective.
 
 Use the Python 3-style print function (supported since Python 2.6).
 
-# rawdog 2.23
+## rawdog 2.23
 
 rawdog now requires Python 2.7. Python 2.6 doesn't build with current toolchains, and hasn't been included in Debian for several releases, so I can't test against it any more.
 
@@ -18,13 +20,13 @@ Add the `--find option`, which shows what feedscanner returns for a given URL (a
 
 The location of `BASE_OPTIONS` has changed in pytidylib 0.3.2; rather than trying to change it, override the corresponding options explicitly.  The meaning of tidylib's wrap option has also changed, so set a sensible default value.
 
-Support the current development version of feedparser (which will presumably be the 5.3 release eventually), which has been restructured into multiple modules, and raises network exceptions (e.g. timeouts) directly from feedparser.parse rather than putting them in `bozo_exception`.
+Support the current development version of feedparser (which will presumably be the 5.3 release eventually), which has been restructured into multiple modules, and raises network exceptions (e.g. timeouts) directly from `feedparser.parse` rather than putting them in `bozo_exception`.
 
-rawdog's exception-handling code has been cleaned up as a result of the above, and should work consistently for old and new versions of feedparser. In the feedparser result dict, `bozo_exception` is now converted to `rawdog_exception` for network errors, and `rawdog_timeout` is set if a timeout exception occurred. For compatibility with existing plugins, an empty "feed" is also provided on a timeout.
+rawdog's exception-handling code has been cleaned up as a result of the above, and should work consistently for old and new versions of feedparser. In the feedparser result dict, `bozo_exception` is now converted to `rawdog_exception` for network errors, and `rawdog_timeout` is set if a timeout exception occurred. For compatibility with existing plugins, an empty `feed` is also provided on a timeout.
 
 Update COPYING and the GPL v2 license notices to the FSF's current recommended text.
 
-# rawdog 2.22
+## rawdog 2.22
 
 When handling an HTTP 301 redirect response, check whether the new location is an absolute URI (as the HTTP/1.1 specification says it should be). Some broken servers return a relative path, or junk, and in those cases rawdog shouldn't update the URL in the config file.
 
@@ -32,7 +34,7 @@ Fix some more style problems reported by pylint.
 
 Specify the input and output character encodings for pytidylib explicitly. tidylib 5 has changed the defaults from ASCII to UTF-8; rawdog relies on it being ASCII in order to generate ASCII output (reported by Lucas Nussbaum).
 
-# rawdog 2.21
+## rawdog 2.21
 
 Don't crash when asked to show a non-existant template (`-s foo`) -- and fix `test-rawdog` so that it detects when a test is expected to fail with an error message, but actually crashes.
 
@@ -46,15 +48,15 @@ Don't crash when feedparser returns a date that Python can't format.  Since feed
 
 When an error occurs while parsing the config file, exit with a non-zero return code, rather than continuing with an incomplete config. This has always been the intended behaviour, but rawdog 2.13 accidentally removed the check.
 
-# rawdog 2.20
+## rawdog 2.20
 
 Add a test for the `maxage` option (suggested by joelmo).
 
 Add a rule to `style.css` to scale down large images.
 
-When looking for SSL timeout exceptions, match any form of "timeout", "time out" or "timed out" in the message. This makes rawdog detect SSL connection timeouts correctly with Debian's Python 2.7.8 package (reported by David Suárez).
+When looking for SSL timeout exceptions, match any form of `timeout`, `time out` or `timed out` in the message. This makes rawdog detect SSL connection timeouts correctly with Debian's Python 2.7.8 package (reported by David Suárez).
 
-# rawdog 2.19
+## rawdog 2.19
 
 Make `test-rawdog` not depend on having a host it can test connection timeouts against, and add a `-T` option if you do have one.
 
@@ -64,7 +66,7 @@ Add some more comprehensive tests for the `changeconfig` option; in particular, 
 
 Don't crash if feedparser raises an exception during an update (i.e.  assume that any part of feedparser's response might be missing, until we've checked that there wasn't an exception).
 
-# rawdog 2.18
+## rawdog 2.18
 
 Be consistent about catching `AttributeError` when looking for attributes that were added to Rawdog during the 2.x series (spotted by Jakub Wilk).
 
@@ -72,7 +74,7 @@ Add some advice in PLUGINS about escaping template parameters. Willem reported t
 
 Make feedscanner handle `Content-Encoding: gzip` in responses, as tumblr.com's webservers will use this even if you explicitly refuse it in the request.
 
-# rawdog 2.17
+## rawdog 2.17
 
 Add a one-paragraph description of rawdog to the README file, for use by packagers.
 
@@ -94,13 +96,13 @@ Don't crash when trying to show a template that doesn't exist.
 
 When removing a feed in splitstate mode, remove its lock file too.
 
-# rawdog 2.16
+## rawdog 2.16
 
 Remove the bundled copy of feedparser, and document that it's now a dependency.
 
 Update the package metadata in `setup.py`.
 
-# rawdog 2.15
+## rawdog 2.15
 
 rawdog now requires Python 2.6 (rather than Python 2.2). This is the version in Debian and Red Hat's previous stable releases, so it should be safe to assume on current systems.
 
@@ -110,7 +112,7 @@ Remove obsolete code that supported pre-2.6 versions of Python (`timeoutsocket.p
 
 Tidy up the code formatting in a few places to make it closer to PEP 8.
 
-Make the rawdog(1) man page describe all of rawdog's options, and make some other minor improvements to the documentation and help.
+Make the `rawdog(1)` man page describe all of rawdog's options, and make some other minor improvements to the documentation and help.
 
 Remove the `--upgrade option`; I think it's highly unlikely that anybody still has any rawdog 1 state files around.
 
@@ -136,7 +138,7 @@ rawdog can now report more than one error for a feed at once -- e.g.  a permanen
 
 Show URLError exceptions returned by feedparser -- this means rawdog gives a sensible error message for a file: or ftp: URL that gives an error, rather than claiming it's a timeout. Plain filenames are now turned into file: URLs so you get consistent errors for both, and timeouts are detected by looking for a timeout exception.
 
-Use a custom urllib2 handler to capture all the HTTP responses that feedparser sees when handling redirects. This means rawdog can now see both the initial and final status code (rather than the combined one feedparser returns) -- so it can correctly handle redirects to errors, and redirects to redirects.
+Use a custom `urllib2` handler to capture all the HTTP responses that feedparser sees when handling redirects. This means rawdog can now see both the initial and final status code (rather than the combined one feedparser returns) -- so it can correctly handle redirects to errors, and redirects to redirects.
 
 Make `hideduplicates id link` work correctly in the odd corner case where an article has both id and link duplicated, but to different other articles.
 
@@ -144,9 +146,9 @@ Upgrade feedparser to version 5.1.3. As a result of the other changes below, raw
 
 Add a `--dump` option to pretty-print feedparser's output for a URL.  The feedparser module used to do this if invoked as a script, but more recent versions of feedparser don't support this.
 
-Use a custom urllib2 handler to do HTTP basic authentication, instead of a feedparser patch. This also fixes proxy authentication, which I accidentally broke by removing a helper class several releases ago.
+Use a custom `urllib2` handler to do HTTP basic authentication, instead of a feedparser patch. This also fixes proxy authentication, which I accidentally broke by removing a helper class several releases ago.
 
-Use a custom urllib2 handler to disable RFC 3229, instead of a feedparser patch. The behaviour is slightly different in that it now sends `A-IM: identity` rather than no header at all; this should have the same effect, though.
+Use a custom `urllib2` handler to disable RFC 3229, instead of a feedparser patch. The behaviour is slightly different in that it now sends `A-IM: identity` rather than no header at all; this should have the same effect, though.
 
 Remove the feedparser patch that provided `_raw` versions of content (before sanitisation) for use in the article hash, and use the normal version instead. Since we disable sanitisation at fetch time anyway, the only difference with current feedparser is that the `_raw` versions didn't have CP1252 encoding fixes applied -- so in the process of upgrading to this version, you'll see some duplicate articles on feeds with CP1252 encoding problems. Tests suggest this doesn't affect many feeds (3 out of the 1000-odd in my test setup).
 
@@ -180,7 +182,7 @@ Add templates for the feed list and each item in the feed list (based on patch f
 
 Don't append an extra newline when showing a template.
 
-# rawdog 2.14
+## rawdog 2.14
 
 When adding a new feed from a page that provides several feeds, make a more informed choice rather than just taking the first one: many blogs provide both content and comments feeds, and we usually want the first one.
 
@@ -188,7 +190,7 @@ Add a note to PLUGINS about making sure plugin storage gets saved.
 
 Use `updated_parsed` instead of the obsolete `modified_parsed` when extracting the feed-provided date for an item, and fall back to `published_parsed` and then `created_parsed` if it doesn't exist (reported by Cristian Rigamonti, Martintxo and chrysn). feedparser currently does fallback automatically, but it's scheduled to be removed at some point, so it's better for rawdog to do it.
 
-# rawdog 2.13
+## rawdog 2.13
 
 Forcibly disable BeautifulSoup support in feedparser, since it returns unpickleable pseudo-string objects, and it crashes when trying to parse twenty or so of my feeds (reported by Joseph Reagle).
 
@@ -208,7 +210,7 @@ If `-v` is specified, force verbose on again after reading a secondary config fi
 
 Resynchronise the feed list after loading a secondary config file; previously feeds in secondary config files were ignored (reported by Jonathan Philips).
 
-# rawdog 2.12
+## rawdog 2.12
 
 Make rawdog work with Python 2.6 (reported by Roy Lanek).
 
@@ -230,7 +232,7 @@ As a result of the splitstate work, the `output_filter` and `output_sort` hooks 
 
 Add the `useids` option, which makes rawdog respect article GUIDs when updating feeds; if an article's GUID matches one we already know about, we just update the existing article's contents rather than treating it as a new article (like most aggregators do). This is turned on in the default configuration, since the behaviour it produces is generally more useful these days -- many feeds include random advertisements, or other dynamic content, and so the old approach resulted in lots of duplicated articles.
 
-# rawdog 2.11
+## rawdog 2.11
 
 Avoid a crash when a feed's URL is changed and expiry is done on the same run.
 
@@ -248,7 +250,7 @@ Update to the latest feedparser, which fixes an encoding bug with Python 2.5, am
 
 Handle the `author_detail` fields being None.
 
-# rawdog 2.10
+## rawdog 2.10
 
 Work around a feedparser bug (returning a detail without a type field for posts with embedded SVG).
 
@@ -264,7 +266,7 @@ Fix a bug in the expiry code: if you were using keepmin, it could expire article
 
 Clean up the example config file a bit.
 
-# rawdog 2.9
+## rawdog 2.9
 
 Fix a documentation bug about time formats (reported by Tim Bishop).
 
@@ -276,11 +278,11 @@ If the author's name is given as the empty string, fall back to the email addres
 
 Change the labels in the feed information table to `Last fetched` and `Next fetched after`, to match what rawdog actually does with the times it stores (reported by D. Stussy).
 
-# rawdog 2.8
+## rawdog 2.8
 
 Fix authentication support -- feedparser now supports Basic and Digest authentication internally, but it needed tweaking to make it useful for rawdog (reported by Tim Bishop).
 
-# rawdog 2.7
+## rawdog 2.7
 
 Make feedfinder smarter about trying to find the preferred type of feed (patch from Decklin Foster).
 
@@ -294,14 +296,14 @@ Fix a feedparser bug that caused things preceding shorttags to be duplicated whe
 
 Set the locale correctly when rawdog starts up (patch from Samuel Hym).
 
-# rawdog 2.6
+## rawdog 2.6
 
 Allow maxage to be set per feed (patch from Craig Allen).
 
 Support feeddefaults with no options on the same line, as used in the
 sample config file (reported by asher).
 
-# rawdog 2.5
+## rawdog 2.5
 
 Ensure that all the strings in `entry_info` are in Unicode form, to make it easier for plugins to deal with them.
 
@@ -333,7 +335,7 @@ Add support for using multiple threads when fetching feeds, which makes updates 
 
 Update the GPL and LGPL headers to include the FSF's new address (reported by Decklin Foster).
 
-# rawdog 2.4
+## rawdog 2.4
 
 Provide guid in item templates (suggested by Rick van Rein).
 
@@ -347,11 +349,11 @@ Fix description of `article_seen` in PLUGINS (reported by Steve Atwell).
 
 Escape odd characters in links and guids, and add a sanity check that'll trip if non-ASCII somehow makes it to the output (reported by TheCrypto).
 
-# rawdog 2.3
+## rawdog 2.3
 
 Make the `id=` parameter work correctly (patch from Jon Nelson).
 
-# rawdog 2.2
+## rawdog 2.2
 
 Add `feeddefaults` statement to specify default feed options.
 
@@ -387,7 +389,7 @@ Add a meta element to the default template to stop search engines indexing rawdo
 
 Add new feeds at the end of the config file rather than before the first feed line (patch from Decklin Foster).
 
-# rawdog 2.1
+## rawdog 2.1
 
 Fix a character encoding problem with `format=text` feeds.
 
@@ -395,7 +397,7 @@ Add `proxyuser` and `proxypassword` options for feeds, so that you can use per-f
 
 Add a manual page (written by Decklin Foster).
 
-Remove extraneous `#!` line from `feedparser.py` (reported by Decklin Foster).
+Remove extraneous `##!` line from `feedparser.py` (reported by Decklin Foster).
 
 Update an article's modified date when a new version of it is seen (reported by Decklin Foster).
 
@@ -405,7 +407,7 @@ Make the README file list all the options that rawdog now supports (reported by 
 
 Make `--verbose` work even if it's specified after an action (reported by Dan Noe and David Durschlag).
 
-# rawdog 2.0
+## rawdog 2.0
 
 Update to feedparser 3.3. This meant reworking some of rawdog's internals; state files from old versions will no longer work with rawdog 2.0 (and external programs that manipulate rawdog state files will also be broken). The new feedparser provides a much nicer API, and is significantly more robust; several feeds that previously caused feedparser internal errors or Python segfaults now work fine.
 
@@ -436,11 +438,11 @@ Correctly handle dates with timezones specified in non-UTC locales (reported by 
 
 When a feed's URL changes, as indicated by a permanent HTTP redirect, automatically update the config file and state.
 
-# rawdog 1.13
+## rawdog 1.13
 
 Handle `OverflowError` with parsed dates (patch from Matthew Scott).
 
-# rawdog 1.12
+## rawdog 1.12
 
 Add `sortbyfeeddate` option for planet pages (requested by David Dorward).
 
@@ -448,7 +450,7 @@ Add `currentonly` option (patch from Chris Cutler).
 
 Handle nested CDATA blocks in feed XML and HTML correctly in feedparser.
 
-# rawdog 1.11
+## rawdog 1.11
 
 Add `__num_items__` and `__num_feeds__` to the page template, and `__url__` to the item template (patch from Chris Cutler).
 
@@ -462,7 +464,7 @@ HTML metacharacters in links are now encoded correctly in generated HTML (`foo?a
 
 Content type selection is now performed for all elements returned from the feed, since some Blogger v5 feeds cause feedparser to return multiple versions of the title and link (reported by Eric Cronin).
 
-# rawdog 1.10
+## rawdog 1.10
 
 Add `ignoretimeouts` option to silently ignore timeout errors.
 
@@ -472,7 +474,7 @@ Fix entity encoding problem with HTML sanitisation that was causing rawdog to th
 
 Include `MANIFEST.in` in the distribution (reported by Chris Cutler).
 
-# rawdog 1.9
+## rawdog 1.9
 
 Add `clear: both;` to item, time and date styles, so that items with floated images in don't extend into the items below them.
 
@@ -498,7 +500,7 @@ Short-form XML tags in RSS (`<description/>`) are now handled correctly.
 
 Numeric entities in RSS encoded content are now handled correctly.
 
-# rawdog 1.8
+## rawdog 1.8
 
 Add `format=text` feed option to handle broken feeds that make their descriptions unescaped text.
 
@@ -508,13 +510,13 @@ Add the `--verbose` argument (and the `verbose` option to match); this makes raw
 
 Add an `include` statement in config files that can be used to include another config file.
 
-Add feed options to select proxies (contributed by Neil Padgen). This is straightforward for Python 2.3, but 2.2's urllib2 has a bug which prevents ProxyHandlers from working; I've added a workaround for now.
+Add feed options to select proxies (contributed by Neil Padgen). This is straightforward for Python 2.3, but 2.2's `urllib2` has a bug which prevents ProxyHandlers from working; I've added a workaround for now.
 
-# rawdog 1.7
+## rawdog 1.7
 
 Fix code in iso8601.py that caused a warning with Python 2.3.
 
-# rawdog 1.6
+## rawdog 1.6
 
 Config file lines are now split on arbitary strings of whitespace, not just single spaces (reported by Joseph Reagle).
 
@@ -530,11 +532,11 @@ Simple conditions are supported in templates: `__if_x__ .. __endif__` only expan
 
 PyXML's iso8601 module is now included so that rawdog can parse dates in feeds.
 
-# rawdog 1.5
+## rawdog 1.5
 
 Remove some debugging code that broke timeouts.
 
-# rawdog 1.4
+## rawdog 1.4
 
 Fix option-compatibility code (reported by BAM).
 
@@ -542,7 +544,7 @@ Add HTTP basic authentication support (which means modifying feedparser again).
 
 Print a more useful error if the statefile can't be read.
 
-# rawdog 1.3
+## rawdog 1.3
 
 Reverted the "retry immediately" behaviour from 1.2, since it causes denied or broken feeds to get checked every time rawdog is run.
 
@@ -564,7 +566,7 @@ Added `--dir` option for people who want two lots of rawdog state (for two sets 
 
 Added `maxage` config option for people who want "only items added in the last hour", and made it possible to disable maxarticles by setting it to 0.
 
-# rawdog 1.2
+## rawdog 1.2
 
 Updated feedparser to 2.5.2, which fixes a bug that was making rawdog handle content incorrectly in Echo feeds, handles more content encoding methods, and returns HTTP status codes. (I've applied a small patch to correct handling of some Echo feeds.)
 
@@ -572,7 +574,7 @@ Added useful messages for different HTTP status codes and HTTP timeouts. Since r
 
 Prefer `content` over `content_encoded`, and fall back correctly if no useful `content` is found.
 
-# rawdog 1.1
+## rawdog 1.1
 
 rawdog now preserves the ordering of articles in the RSS when a group of articles are added at the same time.
 
@@ -580,6 +582,6 @@ Updated rawdog URL in `setup.py`, since it now has a web page.
 
 Updated rssparser to feedparser 2.4, and added very preliminary support for the `content` element it can return (for Echo feeds).
 
-# rawdog 1.0
+## rawdog 1.0
 
 Initial stable release.
