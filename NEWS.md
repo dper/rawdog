@@ -1,8 +1,15 @@
 # NEWS
 
+## rawdog 3.1
+
+* Switched some text files to markdown.
+* Cleaned up `style.css` and the page layout. Removed the "next update" column in the stats table at the bottom. This information is already in the config file.
+* Added `favicon.ico`.
+* Removed some legacy code. There is no longer a logger, and output goes to `stdout`. References to version 1 are all gone now.
+
 ## rawdog 3.0
 
-Converted to Python 3 by Douglas Perkins. In the process, many things were removed. Some options are gone from the config. Plugins are not recognized. You can no longer build this program, but it still works in place. Templates are no longer supported.
+Converted to Python 3 by Douglas Perkins. In the process, many things were removed. Some options are gone from the config. Plugins are not recognized. You can no longer build this program, but it works in place, as it always did. Templates are no longer supported.
 
 ## rawdog 2.24
 
