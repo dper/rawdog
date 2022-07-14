@@ -1,6 +1,6 @@
 # rawdog: RSS aggregator without delusions of grandeur.
-# Copyright 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2021 Adam Sampson <ats@offog.org>
-# Converted to python3 by Douglas Perkins <contact@dperkins.org> 2022.
+# Copyright 2003-2021 Adam Sampson <ats@offog.org>
+# Copyright 2022 Douglas Perkins <contact@dperkins.org>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
 from six.moves import map
 import six
 from six.moves import range
-VERSION = "2.24rc1"
+VERSION = "3.0"
 HTTP_AGENT = "rawdog/" + VERSION
 STATE_VERSION = 2
 
@@ -268,8 +268,6 @@ def fill_template(template, bits):
 	if result.value is not None:
 		return result.value
 
-	encoding = get_system_encoding()
-
 	f = StringIO()
 	if_stack = []
 	def write(s):
@@ -334,12 +332,6 @@ def ensure_unicode(value, encoding):
 
 	if isinstance(value, str):
 		return value
-		#try:
-		#	return value.decode(encoding)
-		#except:
-			# If the encoding's invalid, at least preserve
-			# the byte stream.
-		#	return value.decode("ISO-8859-1")
 	elif isinstance(value, six.text_type) and type(value) is not six.text_type:
 		# This is a subclass of unicode (e.g.  BeautifulSoup's
 		# NavigableString, which is unpickleable in some versions of
@@ -1896,24 +1888,10 @@ def main(argv):
 	system_encoding = locale.getpreferredencoding()
 
 	try:
-		SHORTOPTS = "a:c:d:f:lNr:s:tTuvV:wW"
+		SHORTOPTS = "luw"
 		LONGOPTS = [
-			"add=",
-			"config=",
-			"dir=",
-			"dump=",
-			"find=",
-			"help",
 			"list",
-			"log=",
-			"no-lock-wait",
-			"no-locking",
-			"remove=",
-			"show=",
-			"show-itemtemplate",
-			"show-template",
 			"update",
-			"update-feed=",
 			"write",
 			]
 		(optlist, args) = getopt.getopt(argv, SHORTOPTS, LONGOPTS)
@@ -1998,33 +1976,11 @@ def main(argv):
 		return 1
 
 	rawdog.sync_from_config(config)
-
 	call_hook("startup", rawdog, config)
 
 	for o, a in optlist:
-		if o in ("-a", "--add"):
-			add_feed("config", a, rawdog, config)
-			config.reload()
-			rawdog.sync_from_config(config)
-		elif o in ("-c", "--config"):
-			rc = load_config(a)
-			if rc != 0:
-				return rc
-			rawdog.sync_from_config(config)
-		elif o in ("-f", "--update-feed"):
-			rawdog.update(config, a)
-		elif o in ("-l", "--list"):
+		if o in ("-l", "--list"):
 			rawdog.list(config)
-		elif o in ("-r", "--remove"):
-			remove_feed("config", a, config)
-			config.reload()
-			rawdog.sync_from_config(config)
-		elif o in ("-s", "--show"):
-			rawdog.show_template(a, config)
-		elif o in ("-t", "--show-template"):
-			rawdog.show_template("page", config)
-		elif o in ("-T", "--show-itemtemplate"):
-			rawdog.show_template("item", config)
 		elif o in ("-u", "--update"):
 			rawdog.update(config)
 		elif o in ("-w", "--write"):
