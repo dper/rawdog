@@ -6,18 +6,18 @@ body {
 	max-width: 70em;
 	text-align: justify;
 }
-#header h1 {
+h1.title {
 	text-align: center;
 	font-variant: small-caps;
 	border-bottom: 1px dashed black;
 }
-div.day h2 {
+div.day h2.day {
 	font-size: 1em;
 	margin: 0;
 	padding: 0;
 	color: gray;
 }
-div.time h3 {
+div.time h3.time {
 	font-size: 1em;
 	margin: 0;
 	padding: 0;

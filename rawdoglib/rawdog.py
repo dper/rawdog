@@ -792,13 +792,13 @@ class DayWriter:
 	def start_day(self, tm):
 		self.file.write('<div class="day">\n')
 		day = safe_ftime(self.config["dayformat"], tm)
-		self.file.write('<h2>' + day + '</h2>\n')
+		self.file.write('<h2 class="day">' + day + '</h2>\n')
 		self.counter += 1
 
 	def start_time(self, tm):
 		self.file.write('<div class="time">\n')
 		clock = safe_ftime(self.config["timeformat"], tm)
-		self.file.write('<h3>' + clock + '</h3>\n')
+		self.file.write('<h3 class="time">' + clock + '</h3>\n')
 		self.counter += 1
 
 	def time(self, s):
@@ -1116,7 +1116,7 @@ class FeedFetcher:
 					# No jobs left.
 					break
 
-			print("[", num, "] Fetching feed:", job)
+			print(num, "- Fetching feed:", job)
 			feed = rawdog.feeds[job]
 			call_hook("pre_update_feed", rawdog, config, feed)
 			result = feed.fetch(rawdog, config)
@@ -1411,9 +1411,7 @@ class Rawdog(Persistable):
     <link rel="icon" href="favicon.ico" type="image/x-icon" />
 </head>
 <body id="rawdog">
-<div id="header">
-<h1>News</h1>
-</div>
+<h1 class="title">News</h1>
 <div id="items">
 __items__
 </div>
