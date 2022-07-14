@@ -1,6 +1,9 @@
 # rawdog: RSS aggregator without delusions of grandeur.
+#
 # Copyright 2003-2021 Adam Sampson <ats@offog.org>
-# Copyright 2022 Douglas Perkins <contact@dperkins.org>
+# Copyright 2022 Douglas Perkins
+#
+# https://github.com/dper/rawdog/
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -1131,32 +1134,6 @@ def edit_file(filename, editfunc):
 	oldfile.close()
 	os.rename(newname, filename)
 
-class AddFeedEditor:
-	def __init__(self, feedline):
-		self.feedline = feedline
-	def edit(self, inputfile, outputfile):
-		d = inputfile.read()
-		outputfile.write(d)
-		if not d.endswith("\n"):
-			outputfile.write("\n")
-		outputfile.write(self.feedline)
-
-def add_feed(filename, url, rawdog, config):
-	"""Try to add a feed to the config file."""
-	feeds = rawdoglib.feedscanner.feeds(url, agent=HTTP_AGENT)
-	if feeds == []:
-		config.warn("Cannot find any feeds in ", url)
-		return
-
-	feed = feeds[0]
-	if feed in rawdog.feeds:
-		config.warn("Feed ", feed, " is already in the config file")
-		return
-
-	config.warn("Adding feed ", feed)
-	feedline = "feed %s %s\n" % (config["newfeedperiod"], feed)
-	edit_file(filename, AddFeedEditor(feedline).edit)
-
 class ChangeFeedEditor:
 	def __init__(self, oldurl, newurl):
 		self.oldurl = oldurl
@@ -1167,36 +1144,6 @@ class ChangeFeedEditor:
 			if len(ls) > 2 and ls[0] == "feed" and ls[2] == self.oldurl:
 				line = line.replace(self.oldurl, self.newurl, 1)
 			outputfile.write(line)
-
-class RemoveFeedEditor:
-	def __init__(self, url):
-		self.url = url
-	def edit(self, inputfile, outputfile):
-		while True:
-			l = inputfile.readline()
-			if l == "":
-				break
-			ls = l.strip().split(None)
-			if len(ls) > 2 and ls[0] == "feed" and ls[2] == self.url:
-				while True:
-					l = inputfile.readline()
-					if l == "":
-						break
-					elif l[0] == "#":
-						outputfile.write(l)
-					elif l[0] not in string.whitespace:
-						outputfile.write(l)
-						break
-			else:
-				outputfile.write(l)
-
-def remove_feed(filename, url, config):
-	"""Try to remove a feed from the config file."""
-	if url not in [f[0] for f in config["feedslist"]]:
-		config.warn("Feed ", url, " is not in the config file")
-	else:
-		config.warn("Removing feed ", url)
-		edit_file(filename, RemoveFeedEditor(url).edit)
 
 class FeedFetcher:
 	"""Class that will handle fetching a set of feeds in parallel."""
@@ -1277,7 +1224,6 @@ class Rawdog(Persistable):
 		try:
 			version = self.state_version
 		except AttributeError:
-			# rawdog 1.x didn't keep track of this.
 			version = 1
 		return version == STATE_VERSION
 
@@ -1573,13 +1519,6 @@ __feeditems__
 		else:
 			raise KeyError("Unknown template name: " + name)
 
-	def show_template(self, name, config):
-		"""Show the contents of a template, as currently configured."""
-		try:
-			sys.stdout.write(self.get_template(config, name))
-		except KeyError:
-			config.warn("Unknown template name: ", name)
-
 	def write_article(self, f, article, config):
 		"""Write an article to the given file."""
 		feed = self.feeds[article.feed]
@@ -1853,29 +1792,10 @@ def usage():
 	print("""rawdog, version """ + VERSION + """
 Usage: rawdog [OPTION]...
 
-General options (use only once):
--d|--dir DIR                 Use DIR instead of ~/.rawdog
--N, --no-locking             Do not lock the state file
--V|--log FILE                Append detailed status information to FILE
--W, --no-lock-wait           Exit silently if state file is locked
-
 Actions (performed in order given):
--a|--add URL                 Try to find a feed associated with URL and
-                             add it to the config file
--f|--update-feed URL         Force an update on the single feed URL
 -l, --list                   List feeds known at time of last update
--r|--remove URL              Remove feed URL from the config file
--s|--show TEMPLATE           Show the contents of a template
-                             (TEMPLATE may be: page item feedlist feeditem)
 -u, --update                 Fetch data from feeds and store it
--w, --write                  Write out HTML output
-
-Special actions (all other options are ignored if one of these is specified):
---dump URL                   Show what rawdog's parser returns for URL
---find URL                   Show what rawdog's feed finder returns for URL
---help                       Display this help and exit
-
-Report bugs to <ats@offog.org>.""")
+-w, --write                  Write out HTML output""")
 
 def main(argv):
 	"""The command-line interface to the aggregator."""
@@ -1987,7 +1907,6 @@ def main(argv):
 			rawdog.write(config)
 
 	call_hook("shutdown", rawdog, config)
-
 	rawdog_p.close()
 
 	return 0
