@@ -875,7 +875,7 @@ class Config:
 			"feedslist" : [],
 			"feeddefaults" : {},
 			"defines" : {},
-			"outputfile" : "output.html",
+			"outputfile" : "index.html",
 			"maxarticles" : 200,
 			"maxage" : 0,
 			"expireage" : 24 * 60 * 60,
@@ -886,11 +886,6 @@ class Config:
 			"userefresh" : True,
 			"showfeeds" : True,
 			"timeout" : 30,
-			"pagetemplate" : "default",
-			"itemtemplate" : "default",
-			"feedlisttemplate" : "default",
-			"feeditemtemplate" : "default",
-			"verbose" : True,
 			"ignoretimeouts" : False,
 			"showtracebacks" : False,
 			"daysections" : True,
@@ -993,16 +988,6 @@ class Config:
 			self["showfeeds"] = parse_bool(l[1])
 		elif l[0] == "timeout":
 			self["timeout"] = parse_time(l[1], "s")
-		elif l[0] in ("template", "pagetemplate"):
-			self["pagetemplate"] = l[1]
-		elif l[0] == "itemtemplate":
-			self["itemtemplate"] = l[1]
-		elif l[0] == "feedlisttemplate":
-			self["feedlisttemplate"] = l[1]
-		elif l[0] == "feeditemtemplate":
-			self["feeditemtemplate"] = l[1]
-		elif l[0] == "verbose":
-			self["verbose"] = parse_bool(l[1])
 		elif l[0] == "ignoretimeouts":
 			self["ignoretimeouts"] = parse_bool(l[1])
 		elif l[0] == "showtracebacks":
