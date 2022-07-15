@@ -2,8 +2,9 @@
 
 ## rawdog 3.2
 
-* This is in progress now.
-* Removed plugins file and references to it.
+* This version is in progress now.
+* Removed plugins.
+* Removed splitstate option.
 
 ## rawdog 3.1
 

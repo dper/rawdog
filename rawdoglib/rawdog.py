@@ -532,7 +532,6 @@ class Feed:
 			version = ""
 
 		self.last_update = now
-
 		errors = []
 		fatal = False
 		old_url = self.url
@@ -547,9 +546,7 @@ class Feed:
 			# According to RFC 2616, the Location header should be
 			# an absolute URI. This doesn't stop the occasional
 			# server sending something like "Location: /" or
-			# "Location: //foo/bar". It's usually a sign of
-			# brokenness, so fail rather than trying to interpret
-			# it liberally.
+			# "Location: //foo/bar". If so, fail.
 			valid_uri = True
 			if location is not None:
 				parsed = six.moves.urllib.parse.urlparse(location)
@@ -586,8 +583,7 @@ class Feed:
 			errors.append("")
 			fatal = True
 		elif last_status == 304:
-			# The feed hasn't changed. Return False to indicate
-			# that we shouldn't do expiry.
+			# The feed hasn't changed.
 			return False
 		elif last_status in [403, 410]:
 			# The feed is disallowed or gone.
@@ -596,8 +592,7 @@ class Feed:
 			errors.append("")
 			fatal = True
 		elif last_status / 100 != 2:
-			# Some sort of client or server error. The feed may
-			# need unsubscribing.
+			# Some sort of client or server error.
 			errors.append("The feed returned an error.")
 			errors.append("If this condition persists, you should remove it from your config file.")
 			errors.append("")
@@ -621,7 +616,6 @@ class Feed:
 				return False
 
 		# From here, assume a complete feedparser response.
-
 		p = ensure_unicode(p, p.get("encoding") or "UTF-8")
 
 		# No entries means the feed hasn't changed, but for some reason
@@ -909,7 +903,6 @@ class Config:
 			"newfeedperiod" : "3h",
 			"changeconfig": True,
 			"numthreads": 4,
-			"splitstate": False,
 			"useids": True,
 			}
 
@@ -1034,8 +1027,6 @@ class Config:
 			self["changeconfig"] = parse_bool(l[1])
 		elif l[0] == "numthreads":
 			self["numthreads"] = int(l[1])
-		elif l[0] == "splitstate":
-			self["splitstate"] = parse_bool(l[1])
 		elif l[0] == "useids":
 			self["useids"] = parse_bool(l[1])
 		elif l[0] == "include":
@@ -1130,7 +1121,6 @@ class Rawdog(Persistable):
 		self.articles = {}
 		self.plugin_storage = {}
 		self.state_version = STATE_VERSION
-		self.using_splitstate = None
 
 	def get_plugin_storage(self, plugin):
 		try:
@@ -1168,17 +1158,9 @@ class Rawdog(Persistable):
 		del self.feeds[oldurl]
 		self.feeds[newurl] = feed
 
-		if config["splitstate"]:
-			feedstate_p = persister.get(FeedState, old_state)
-			feedstate_p.rename(feed.get_state_filename())
-			with feedstate_p as feedstate:
-				for article in list(feedstate.articles.values()):
-					article.feed = newurl
-				feedstate.modified()
-		else:
-			for article in list(self.articles.values()):
-				if article.feed == oldurl:
-					article.feed = newurl
+		for article in list(self.articles.values()):
+			if article.feed == oldurl:
+				article.feed = newurl
 
 		error_fn("The config file has been updated automatically.")
 
@@ -1195,48 +1177,6 @@ class Rawdog(Persistable):
 	def sync_from_config(self, config):
 		"""Update rawdog's internal state to match the
 		configuration."""
-
-		# Make sure the splitstate directory exists.
-		if config["splitstate"]:
-			try:
-				os.mkdir("feeds")
-			except OSError:
-				# Most likely it already exists.
-				pass
-
-		# Convert to or from splitstate if necessary.
-		try:
-			u = self.using_splitstate
-		except AttributeError:
-			# We were last run with a version of rawdog that didn't
-			# have this variable -- so we must have a single state
-			# file.
-			u = False
-		if u is None:
-			self.using_splitstate = config["splitstate"]
-		elif u != config["splitstate"]:
-			if config["splitstate"]:
-				print("Converting to split state files")
-				for feed_hash, feed in list(self.feeds.items()):
-					with persister.get(FeedState, feed.get_state_filename()) as feedstate:
-						feedstate.articles = {}
-						for article_hash, article in list(self.articles.items()):
-							if article.feed == feed_hash:
-								feedstate.articles[article_hash] = article
-						feedstate.modified()
-				self.articles = {}
-			else:
-				print("Converting to single state file")
-				self.articles = {}
-				for feed_hash, feed in list(self.feeds.items()):
-					with persister.get(FeedState, feed.get_state_filename()) as feedstate:
-						for article_hash, article in list(feedstate.articles.items()):
-							self.articles[article_hash] = article
-						feedstate.articles = {}
-						feedstate.modified()
-					persister.delete(feed.get_state_filename())
-			self.modified()
-			self.using_splitstate = config["splitstate"]
 
 		seen_feeds = set()
 		for (url, period, args) in config["feedslist"]:
@@ -1260,12 +1200,11 @@ class Rawdog(Persistable):
 		for url in list(self.feeds.keys()):
 			if url not in seen_feeds:
 				print("Removing feed: ", url)
-				if config["splitstate"]:
-					persister.delete(self.feeds[url].get_state_filename())
-				else:
-					for key, article in list(self.articles.items()):
-						if article.feed == url:
-							del self.articles[key]
+
+				for key, article in list(self.articles.items()):
+					if article.feed == url:
+						del self.articles[key]
+
 				del self.feeds[url]
 				self.modified()
 
@@ -1335,32 +1274,14 @@ class Rawdog(Persistable):
 			count += 1
 			print("Updating feed ", count, " of ", numfeeds, ": ", url)
 			feed = self.feeds[url]
-
-			if config["splitstate"]:
-				feedstate_p = persister.get(FeedState, feed.get_state_filename())
-				feedstate = feedstate_p.open()
-				articles = feedstate.articles
-			else:
-				articles = self.articles
-
+			articles = self.articles
 			content = fetched[url]
 			rc = feed.update(self, now, config, articles, content)
 			url = feed.url
 			if rc:
 				seen_some_items.add(url)
-				if config["splitstate"]:
-					feedstate.modified()
 
-			if config["splitstate"]:
-				if do_expiry(articles):
-					feedstate.modified()
-				feedstate_p.close()
-
-		if config["splitstate"]:
-			self.articles = {}
-		else:
-			do_expiry(self.articles)
-
+		do_expiry(self.articles)
 		self.modified()
 
 	def get_template(self, config, name="page"):
@@ -1637,41 +1558,14 @@ __feeditems__
 
 		def list_articles(articles):
 			return [(-a.get_sort_date(config), a.feed, a.sequence, a.hash) for a in list(articles.values())]
-		if config["splitstate"]:
-			article_list = []
-			for feed in list(self.feeds.values()):
-				with persister.get(FeedState, feed.get_state_filename()) as feedstate:
-					article_list += list_articles(feedstate.articles)
-		else:
-			article_list = list_articles(self.articles)
-
+		article_list = list_articles(self.articles)
 		numarticles = len(article_list)
 		article_list.sort()
 
 		if config["maxarticles"] != 0:
 			article_list = article_list[:config["maxarticles"]]
 
-		if config["splitstate"]:
-			wanted = {}
-			for (date, feed_url, seq, hash) in article_list:
-				if not feed_url in self.feeds:
-					# This can happen if you've managed to
-					# kill rawdog between it updating a
-					# split state file and the main state
-					# -- so just ignore the article and
-					# it'll expire eventually.
-					continue
-				wanted.setdefault(feed_url, []).append(hash)
-
-			found = {}
-			for (feed_url, article_hashes) in list(wanted.items()):
-				feed = self.feeds[feed_url]
-				with persister.get(FeedState, feed.get_state_filename()) as feedstate:
-					for hash in article_hashes:
-						found[hash] = feedstate.articles[hash]
-		else:
-			found = self.articles
-
+		found = self.articles
 		articles = []
 		article_dates = {}
 		for (date, feed, seq, hash) in article_list:
