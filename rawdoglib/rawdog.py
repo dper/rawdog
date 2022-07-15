@@ -27,7 +27,6 @@ STATE_VERSION = 2
 
 import rawdoglib.feedscanner
 from rawdoglib.persister import Persistable, Persister
-from rawdoglib.plugins import Box, call_hook, load_plugins
 
 from io import StringIO
 import base64
@@ -160,8 +159,6 @@ def sanitise_html(html, baseurl, inline, config):
 			# In tidy 5, wrap=0 means wrap to width 0.
 			"wrap": 68,
 			}
-		call_hook("mxtidy_args", config, args, baseurl, inline)
-		call_hook("tidy_args", config, args, baseurl, inline)
 		if tidylib is not None:
 			output = tidylib.tidy_document(html, args)[0]
 		elif mxtidy is not None:
@@ -172,9 +169,7 @@ def sanitise_html(html, baseurl, inline, config):
 		html = output[output.find("<body>") + 6
 		              : output.rfind("</body>")].strip()
 
-	box = Box(html)
-	call_hook("clean_html", config, box, baseurl, inline)
-	return box.value
+	return html
 
 def select_detail(details):
 	"""Pick the preferred type of detail from a list of details. (If the
@@ -266,10 +261,6 @@ def fill_template(template, bits):
 	including sections bracketed by __if_x__ .. [__else__ ..]
 	__endif__ if bits["x"] is not "". If not bits.has_key("x"),
 	__x__ expands to ""."""
-	result = Box()
-	call_hook("fill_template", template, bits, result)
-	if result.value is not None:
-		return result.value
 
 	f = StringIO()
 	if_stack = []
@@ -475,8 +466,6 @@ class Feed:
 			# being published by the feed, we have to turn it off.
 			handlers.append(DisableIMProcessor())
 
-		call_hook("add_urllib2_handlers", rawdog, config, self, handlers)
-
 		url = self.url
 		# Turn plain filenames into file: URLs. (feedparser will open
 		# plain filenames itself, but we want it to open the file with
@@ -621,7 +610,6 @@ class Feed:
 			fatal = True
 
 		old_error = "\n".join(errors)
-		call_hook("feed_fetched", rawdog, config, self, p, old_error, not fatal)
 
 		if len(errors) != 0:
 			print("Feed:        ", old_url)
@@ -632,7 +620,7 @@ class Feed:
 			if fatal:
 				return False
 
-		# From here, we assume a complete feedparser response.
+		# From here, assume a complete feedparser response.
 
 		p = ensure_unicode(p, p.get("encoding") or "UTF-8")
 
@@ -659,10 +647,6 @@ class Feed:
 		sequence = 0
 		for entry_info in p["entries"]:
 			article = Article(feed, entry_info, now, sequence)
-			ignore = Box(False)
-			call_hook("article_seen", rawdog, config, article, ignore)
-			if ignore.value:
-				continue
 			seen_articles.add(article.hash)
 			sequence += 1
 
@@ -676,10 +660,8 @@ class Feed:
 
 			if existing_article is not None:
 				existing_article.update_from(article, now)
-				call_hook("article_updated", rawdog, config, existing_article, now)
 			else:
 				articles[article.hash] = article
-				call_hook("article_added", rawdog, config, article, now)
 
 		if config["currentonly"]:
 			for (hash, a) in list(articles.items()):
@@ -996,9 +978,6 @@ class Config:
 			if len(l) != 2:
 				raise ConfigError("Bad line in config: " + line)
 			self["defines"][l[0]] = l[1]
-		elif l[0] == "plugindirs":
-			for dir in parse_list(l[1]):
-				load_plugins(dir, self)
 		elif l[0] == "outputfile":
 			self["outputfile"] = l[1]
 		elif l[0] == "maxarticles":
@@ -1061,10 +1040,6 @@ class Config:
 			self["useids"] = parse_bool(l[1])
 		elif l[0] == "include":
 			self.load(l[1], False)
-		elif call_hook("config_option_arglines", self, l[0], l[1], arglines):
-			handled_arglines = True
-		elif call_hook("config_option", self, l[0], l[1]):
-			pass
 		else:
 			raise ConfigError("Unknown config command: " + l[0])
 
@@ -1118,7 +1093,6 @@ class FeedFetcher:
 
 			print(num, "- Fetching feed:", job)
 			feed = rawdog.feeds[job]
-			call_hook("pre_update_feed", rawdog, config, feed)
 			result = feed.fetch(rawdog, config)
 
 			with self.lock:
@@ -1349,7 +1323,6 @@ class Rawdog(Persistable):
 				    and url in self.feeds
 				    and article.can_expire(now, config)
 				    and feedcounts[url] > self.feeds[url].get_keepmin(config)):
-					call_hook("article_expired", self, config, article, now)
 					count += 1
 					feedcounts[url] -= 1
 					del articles[key]
@@ -1371,10 +1344,8 @@ class Rawdog(Persistable):
 				articles = self.articles
 
 			content = fetched[url]
-			call_hook("mid_update_feed", self, config, feed, content)
 			rc = feed.update(self, now, config, articles, content)
 			url = feed.url
-			call_hook("post_update_feed", self, config, feed, rc)
 			if rc:
 				seen_some_items.add(url)
 				if config["splitstate"]:
@@ -1534,7 +1505,6 @@ __feeditems__
 		else:
 			itembits["date"] = ""
 
-		call_hook("output_item_bits", self, config, feed, article, itembits)
 		itemtemplate = self.get_template(config, "item")
 		f.write(fill_template(itemtemplate, itembits))
 
@@ -1638,22 +1608,17 @@ __feeditems__
 		"""Write a regular rawdog HTML output file."""
 		f = StringIO()
 		dw = DayWriter(f, config)
-		call_hook("output_items_begin", self, config, f)
 
 		for article in articles:
-			if not call_hook("output_items_heading", self, config, f, article, article_dates[article]):
-				dw.time(article_dates[article])
-
+			dw.time(article_dates[article])
 			self.write_article(f, article, config)
 
 		dw.close()
-		call_hook("output_items_end", self, config, f)
 
 		bits = self.get_main_template_bits(config)
 		bits["items"] = f.getvalue()
 		f.close()
 		bits["num_items"] = str(len(articles))
-		call_hook("output_bits", self, config, bits)
 		s = fill_template(self.get_template(config, "page"), bits)
 		outputfile = config["outputfile"]
 		if outputfile == "-":
@@ -1679,10 +1644,9 @@ __feeditems__
 					article_list += list_articles(feedstate.articles)
 		else:
 			article_list = list_articles(self.articles)
-		numarticles = len(article_list)
 
-		if not call_hook("output_sort_articles", self, config, article_list):
-			article_list.sort()
+		numarticles = len(article_list)
+		article_list.sort()
 
 		if config["maxarticles"] != 0:
 			article_list = article_list[:config["maxarticles"]]
@@ -1716,17 +1680,9 @@ __feeditems__
 				articles.append(a)
 				article_dates[a] = -date
 
-		call_hook("output_write", self, config, articles)
-
-		if not call_hook("output_sorted_filter", self, config, articles):
-			(articles, dup_count) = self.write_remove_dups(articles, config, now)
-		else:
-			dup_count = 0
-
+		(articles, dup_count) = self.write_remove_dups(articles, config, now)
 		print("Selected", len(articles), "of", numarticles, "articles. Ignored", dup_count, "duplicates.")
-
-		if not call_hook("output_write_files", self, config, articles, article_dates):
-			self.write_output_file(articles, article_dates, config)
+		self.write_output_file(articles, article_dates, config)
 
 def usage():
 	"""Display usage information."""
@@ -1837,7 +1793,6 @@ def main(argv):
 		return 1
 
 	rawdog.sync_from_config(config)
-	call_hook("startup", rawdog, config)
 
 	for o, a in optlist:
 		if o in ("-l", "--list"):
@@ -1847,7 +1802,6 @@ def main(argv):
 		elif o in ("-w", "--write"):
 			rawdog.write(config)
 
-	call_hook("shutdown", rawdog, config)
 	rawdog_p.close()
 
 	return 0

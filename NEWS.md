@@ -1,5 +1,10 @@
 # NEWS
 
+## rawdog 3.2
+
+* This is in progress now.
+* Removed plugins file and references to it.
+
 ## rawdog 3.1
 
 * Switched some text files to markdown.
