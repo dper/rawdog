@@ -560,18 +560,12 @@ class Feed:
 			errors.append("")
 
 		if "rawdog_timeout" in p:
-			if config["ignoretimeouts"]:
-				return False
-			else:
-				errors.append("Timeout while reading feed.")
-				errors.append("")
-				fatal = True
+			errors.append("Timeout while reading feed.")
+			errors.append("")
+			fatal = True
 		elif "rawdog_exception" in p:
 			errors.append("Error fetching or parsing feed:")
 			errors.append(str(p["rawdog_exception"]))
-			if config["showtracebacks"] and "rawdog_traceback" in p:
-				from traceback import format_tb
-				errors.append("".join(format_tb(p["rawdog_traceback"])))
 			errors.append("")
 			fatal = True
 		elif last_status == 304:
@@ -871,8 +865,6 @@ class Config:
 			"userefresh" : True,
 			"showfeeds" : True,
 			"timeout" : 30,
-			"ignoretimeouts" : False,
-			"showtracebacks" : False,
 			"daysections" : True,
 			"timesections" : True,
 			"blocklevelhtml" : True,
@@ -963,10 +955,6 @@ class Config:
 			self["showfeeds"] = self.parse_bool(l[1])
 		elif l[0] == "timeout":
 			self["timeout"] = self.parse_time(l[1], "s")
-		elif l[0] == "ignoretimeouts":
-			self["ignoretimeouts"] = self.parse_bool(l[1])
-		elif l[0] == "showtracebacks":
-			self["showtracebacks"] = self.parse_bool(l[1])
 		elif l[0] == "daysections":
 			self["daysections"] = self.parse_bool(l[1])
 		elif l[0] == "timesections":
