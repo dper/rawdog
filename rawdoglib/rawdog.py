@@ -781,13 +781,10 @@ class ConfigError(Exception):
 class Config:
 	"""The aggregator's configuration."""
 
-	def __init__(self, locking=True, logfile_name=None):
+	def __init__(self, locking=True):
 		self.locking = locking
 		self.files_loaded = []
 		self.loglock = threading.Lock()
-		self.logfile = None
-		if logfile_name:
-			self.logfile = open(logfile_name, "a")
 		self.reset()
 
 	def parse_time(self, value, default="m"):
@@ -1487,6 +1484,7 @@ __feeditems__
 
 def usage():
 	"""Display usage information."""
+
 	print("""rawdog, version """ + VERSION + """
 Usage: rawdog [OPTION]...
 
@@ -1500,7 +1498,7 @@ def main(argv):
 
 	locale.setlocale(locale.LC_ALL, "")
 
-	# This is quite expensive and not threadsafe, so we do it on
+	# This is quite expensive and not threadsafe, so do it on
 	# startup and cache the result.
 	global system_encoding
 	system_encoding = locale.getpreferredencoding()
@@ -1526,33 +1524,12 @@ def main(argv):
 		statedir = os.environ["HOME"] + "/.rawdog"
 	else:
 		statedir = None
-	verbose = True
-	logfile_name = None
 	locking = True
 	no_lock_wait = False
 	for o, a in optlist:
-		if o == "--dump":
-			import pprint
-			pprint.pprint(feedparser.parse(a, agent=HTTP_AGENT))
-			return 0
-		elif o == "--find":
-			feeds = rawdoglib.feedscanner.feeds(a, agent=HTTP_AGENT)
-			if len(feeds) == 0:
-				return 1
-			for url in feeds:
-				print(url)
-			return 0
-		elif o == "--help":
+		if o == "--help":
 			usage()
 			return 0
-		elif o in ("-d", "--dir"):
-			statedir = a
-		elif o in ("-N", "--no-locking"):
-			locking = False
-		elif o in ("-V", "--log"):
-			logfile_name = a
-		elif o in ("-W", "--no-lock-wait"):
-			no_lock_wait = True
 	if statedir is None:
 		print("$HOME not set and state dir not explicitly specified; please use -d/--dir")
 		return 1
@@ -1565,16 +1542,14 @@ def main(argv):
 
 	sys.path.append(".")
 
-	config = Config(locking, logfile_name)
+	config = Config(locking)
 	def load_config(fn):
 		try:
 			config.load(fn)
 		except ConfigError as err:
-			print("In ", fn, ":")
+			print("In", fn, ":")
 			print(err)
 			return 1
-		if verbose:
-			config["verbose"] = True
 		return 0
 	rc = load_config("config")
 	if rc != 0:
