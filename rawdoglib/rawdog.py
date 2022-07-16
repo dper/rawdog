@@ -621,12 +621,11 @@ class Feed:
 		feed = self.url
 
 		article_ids = {}
-		if config["useids"]:
-			# Find IDs for existing articles.
-			for (hash, a) in list(articles.items()):
-				id = a.entry_info.get("id")
-				if a.feed == feed and id is not None:
-					article_ids[id] = a
+		# Find IDs for existing articles.
+		for (hash, a) in list(articles.items()):
+			id = a.entry_info.get("id")
+			if a.feed == feed and id is not None:
+				article_ids[id] = a
 
 		seen_articles = set()
 		sequence = 0
@@ -880,10 +879,9 @@ class Config:
 			"tidyhtml" : True,
 			"sortbyfeeddate" : False,
 			"currentonly" : False,
-			"hideduplicates" : [],
+			"hideduplicates" : ["id"],
 			"newfeedperiod" : "3h",
 			"numthreads": 4,
-			"useids": True,
 			}
 
 	def __getitem__(self, key):
@@ -981,16 +979,10 @@ class Config:
 			self["sortbyfeeddate"] = self.parse_bool(l[1])
 		elif l[0] == "currentonly":
 			self["currentonly"] = self.parse_bool(l[1])
-		elif l[0] == "hideduplicates":
-			self["hideduplicates"] = self.parse_list(l[1])
 		elif l[0] == "newfeedperiod":
 			self["newfeedperiod"] = l[1]
 		elif l[0] == "numthreads":
 			self["numthreads"] = int(l[1])
-		elif l[0] == "useids":
-			self["useids"] = self.parse_bool(l[1])
-		elif l[0] == "include":
-			self.load(l[1], False)
 		else:
 			raise ConfigError("Unknown config command: " + l[0])
 
@@ -1405,15 +1397,10 @@ __feeditems__
 
 			if not feed.args.get("allowduplicates", False):
 				is_dup = False
-				for key in config["hideduplicates"]:
-					if key == "id" and guid is not None:
-						if guid in seen_guids:
-							is_dup = True
-						seen_guids.add(guid)
-					elif key == "link" and link is not None:
-						if link in seen_links:
-							is_dup = True
-						seen_links.add(link)
+				if guid is not None:
+					if guid in seen_guids:
+						is_dup = True
+					seen_guids.add(guid)
 				if is_dup:
 					dup_count += 1
 					continue
