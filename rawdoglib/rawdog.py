@@ -132,7 +132,7 @@ def sanitise_html(html, baseurl, inline, config):
 	p.feed(html)
 	html = p.output()
 
-	if not inline and config["blocklevelhtml"]:
+	if not inline:
 		# If we're after some block-level HTML and the HTML doesn't
 		# start with a block-level element, then insert a <p> tag
 		# before it. This still fails when the HTML contains text, then
@@ -863,8 +863,6 @@ class Config:
 			"timeout" : 30,
 			"daysections" : True,
 			"timesections" : True,
-			"blocklevelhtml" : True,
-			"tidyhtml" : True,
 			"sortbyfeeddate" : False,
 			"currentonly" : False,
 			"newfeedperiod" : "3h",
@@ -954,10 +952,6 @@ class Config:
 			self["daysections"] = self.parse_bool(l[1])
 		elif l[0] == "timesections":
 			self["timesections"] = self.parse_bool(l[1])
-		elif l[0] == "blocklevelhtml":
-			self["blocklevelhtml"] = self.parse_bool(l[1])
-		elif l[0] == "tidyhtml":
-			self["tidyhtml"] = self.parse_bool(l[1])
 		elif l[0] == "sortbyfeeddate":
 			self["sortbyfeeddate"] = self.parse_bool(l[1])
 		elif l[0] == "currentonly":
