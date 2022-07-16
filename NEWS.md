@@ -4,7 +4,7 @@
 
 * This version is in progress now.
 * Removed plugins.
-* Removed splitstate option.
+* Removed around half of the old options. If you have an old config file, you might get startup errors. If you really need behavior that is no longer supported, you'll have to edit the code manually. However, many of those options added flexiblity that's not useful in a simple single user setup, is there shouldn't be major concerns.
 
 ## rawdog 3.1
 
