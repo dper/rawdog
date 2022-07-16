@@ -822,8 +822,7 @@ class Config:
 		return value.strip().split(None)
 
 	def parse_feed_args(self, argparams, arglines):
-		"""Parse a list of feed arguments. Raise ConfigError if the syntax is
-		invalid, or ValueError if an argument value can't be parsed."""
+		"""Parse a list of feed arguments."""
 		args = {}
 		for p in argparams:
 			ps = p.split("=", 1)
@@ -891,7 +890,7 @@ class Config:
 					continue
 				if line[0] in string.whitespace:
 					if lines == []:
-						raise ConfigError("First line in config cannot be an argument")
+						raise ConfigError("First line in config cannot be an argument.")
 					lines[-1][1].append(stripped)
 				else:
 					lines.append((stripped, []))
@@ -964,18 +963,6 @@ class Config:
 
 		if arglines != [] and not handled_arglines:
 			raise ConfigError("Bad argument lines in config after: " + line)
-
-def edit_file(filename, editfunc):
-	"""Edit a file in place: for each line in the input file, call
-	editfunc(line, outputfile), then rename the output file over the input
-	file."""
-	newname = "%s.new-%d" % (filename, os.getpid())
-	oldfile = open(filename, "r")
-	newfile = open(newname, "w")
-	editfunc(oldfile, newfile)
-	newfile.close()
-	oldfile.close()
-	os.rename(newname, filename)
 
 class ChangeFeedEditor:
 	def __init__(self, oldurl, newurl):
@@ -1058,6 +1045,18 @@ class Rawdog(Persistable):
 			version = 1
 		return version == STATE_VERSION
 
+	def edit_file(self, filename, editfunc):
+		"""Edit a file in place: for each line in the input file, call
+		editfunc(line, outputfile), then rename the output file over the input
+		file."""
+		newname = "%s.new-%d" % (filename, os.getpid())
+		oldfile = open(filename, "r")
+		newfile = open(newname, "w")
+		editfunc(oldfile, newfile)
+		newfile.close()
+		oldfile.close()
+		os.rename(newname, filename)
+
 	def change_feed_url(self, oldurl, newurl, config, error_fn):
 		"""Change the URL of a feed."""
 
@@ -1067,7 +1066,7 @@ class Rawdog(Persistable):
 			error_fn("from the config file by hand.")
 			return
 
-		edit_file("config", ChangeFeedEditor(oldurl, newurl).edit)
+		self.edit_file("config", ChangeFeedEditor(oldurl, newurl).edit)
 
 		feed = self.feeds[oldurl]
 		# Changing the URL will change the state filename as well,
