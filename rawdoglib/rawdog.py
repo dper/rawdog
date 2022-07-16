@@ -1579,5 +1579,4 @@ def main(argv):
 			rawdog.write(config)
 
 	rawdog_p.close()
-
 	return 0
