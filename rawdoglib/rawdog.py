@@ -51,14 +51,15 @@ import six.moves.urllib.parse
 try:
 	import tidylib
 except:
+	print("TidyLib not found.")
 	tidylib = None
 
 try:
 	import mx.Tidy as mxtidy
+	print("mxTidy not found.")
 except:
 	mxtidy = None
 
-# The sanitisation code was restructured in feedparser 5.3.
 try:
 	_resolveRelativeURIs = feedparser.urls.resolve_relative_uris
 except AttributeError:
@@ -68,10 +69,9 @@ try:
 except AttributeError:
 	_HTMLSanitizer = feedparser._HTMLSanitizer
 
-# This is initialised in main().
 persister = None
-
 system_encoding = None
+
 def get_system_encoding():
 	"""Get the system encoding."""
 	return system_encoding
@@ -96,20 +96,23 @@ def format_time(secs, config):
 		format = config["dayformat"] + " " + config["timeformat"]
 	return safe_ftime(format, t)
 
-high_char_re = re.compile(r'[^\000-\177]')
 def encode_references(s):
 	"""Encode characters in a Unicode string using HTML references."""
+
+	high_char_re = re.compile(r'[^\000-\177]')
+
 	def encode(m):
 		return "&#" + str(ord(m.group(0))) + ";"
 	return high_char_re.sub(encode, s)
 
-# This list of block-level elements came from the HTML 4.01 specification.
-block_level_re = re.compile(r'^\s*<(p|h1|h2|h3|h4|h5|h6|ul|ol|pre|dl|div|noscript|blockquote|form|hr|table|fieldset|address)[^a-z]', re.I)
 def sanitise_html(html, baseurl, inline, config):
 	"""Attempt to turn arbitrary feed-provided HTML into something
 	suitable for safe inclusion into the rawdog output. The inline
 	parameter says whether to expect a fragment of inline text, or a
 	sequence of block-level elements."""
+
+	block_level_re = re.compile(r'^\s*<(p|h1|h2|h3|h4|h5|h6|ul|ol|pre|dl|div|noscript|blockquote|form|hr|table|fieldset|address)[^a-z]', re.I)
+
 	if html is None:
 		return None
 
@@ -172,8 +175,7 @@ def sanitise_html(html, baseurl, inline, config):
 	return html
 
 def select_detail(details):
-	"""Pick the preferred type of detail from a list of details. (If the
-	argument isn't a list, treat it as a list of one.)"""
+	"""Pick the preferred type of detail from a list of details."""
 	TYPES = {
 		"text/html": 30,
 		"application/xhtml+xml": 20,
@@ -339,31 +341,6 @@ def ensure_unicode(value, encoding):
 	else:
 		return value
 
-timeout_re = re.compile(r'timed? ?out', re.I)
-def is_timeout_exception(exc):
-	"""Return True if the given exception object suggests that a timeout
-	occurred, else return False."""
-
-	if exc is None:
-		return False
-
-	if isinstance(exc, socket.timeout):
-		return True
-
-	# Since urlopen throws away the original exception object,
-	# we have to look at the stringified form to tell if it was a timeout.
-	# (We're in reasonable company here, since test_ssl.py in the Python
-	# distribution does the same thing!)
-	#
-	# The message we're looking for is something like:
-	# Stock Python 2.7.7 and 2.7.8:
-	#   <urlopen error _ssl.c:495: The handshake operation timed out>
-	# Debian python 2.7.3-4+deb7u1:
-	#   <urlopen error _ssl.c:489: The handshake operation timed out>
-	# Debian python 2.7.8-1:
-	#   <urlopen error ('_ssl.c:563: The handshake operation timed out',)>
-	return timeout_re.search(str(exc)) is not None
-
 class BasicAuthProcessor(six.moves.urllib.request.BaseHandler):
 	"""urllib2 handler that does HTTP basic authentication
 	or proxy authentication with a fixed username and password."""
@@ -418,9 +395,10 @@ class ResponseLogProcessor(six.moves.urllib.request.BaseHandler):
 	def get_log(self):
 		return self.log
 
-non_alphanumeric_re = re.compile(r'<[^>]*>|\&[^\;]*\;|[^a-z0-9]')
 class Feed:
 	"""An RSS feed."""
+
+	non_alphanumeric_re = re.compile(r'<[^>]*>|\&[^\;]*\;|[^a-z0-9]')
 
 	def __init__(self, url):
 		self.url = url
@@ -430,6 +408,24 @@ class Feed:
 		self.modified = None
 		self.last_update = 0
 		self.feed_info = {}
+
+	def is_timeout_exception(self, exc):
+		"""Return True if the exception suggests a timeout occurred."""
+
+		timeout_re = re.compile(r'timed? ?out', re.I)
+
+		if exc is None:
+			return False
+
+		if isinstance(exc, socket.timeout):
+			return True
+
+		# Since urlopen throws away the original exception object,
+		# we have to look at the stringified form to tell if it was a timeout.
+		#
+		# The message we're looking for is something like:
+		#   <urlopen error _ssl.c:495: The handshake operation timed out>
+		return timeout_re.search(str(exc)) is not None
 
 	def needs_update(self, now):
 		"""Return True if it's time to update this feed, or False if
@@ -492,12 +488,12 @@ class Feed:
 			# download errors in bozo_exception rather than raising
 			# them from feedparser.parse. Normalise this.
 			e = result.get("bozo_exception")
-			if is_timeout_exception(e):
+			if self.is_timeout_exception(e):
 				result = {"rawdog_timeout": e}
 			elif isinstance(e, six.moves.urllib.error.URLError):
 				result = {"rawdog_exception": e}
 		except Exception as e:
-			if is_timeout_exception(e):
+			if self.is_timeout_exception(e):
 				result = {"rawdog_timeout": e}
 			else:
 				result = {
@@ -505,7 +501,6 @@ class Feed:
 					"rawdog_traceback": sys.exc_info()[2],
 					}
 		result["rawdog_responses"] = logger.get_log()
-
 		return result
 
 	def update(self, rawdog, now, config, articles, p):
@@ -625,7 +620,6 @@ class Feed:
 
 		self.etag = p.get("etag")
 		self.modified = p.get("modified")
-
 		self.feed_info = p["feed"]
 		feed = self.url
 
@@ -687,7 +681,7 @@ class Feed:
 			return self.args["id"]
 		else:
 			r = self.get_html_name(config).lower()
-			return non_alphanumeric_re.sub('', r)
+			return self.non_alphanumeric_re.sub('', r)
 
 	def get_keepmin(self, config):
 		return self.args.get("keepmin", config["keepmin"])
@@ -699,8 +693,8 @@ class Article:
 		self.feed = feed
 		self.entry_info = entry_info
 		self.sequence = sequence
-
 		self.date = None
+
 		parsed = entry_info.get("updated_parsed")
 		if parsed is None:
 			parsed = entry_info.get("published_parsed")
@@ -713,14 +707,11 @@ class Article:
 				pass
 
 		self.hash = self.compute_initial_hash()
-
 		self.last_seen = now
 		self.added = now
 
 	def compute_initial_hash(self):
-		"""Compute an initial unique hash for an article.
-		The generated hash must be unique amongst all articles in the
-		system."""
+		"""Compute an initial unique hash for an article."""
 		h = hashlib.sha1()
 		def add_hash(s):
 			h.update(s.encode("UTF-8"))
@@ -740,8 +731,7 @@ class Article:
 		return h.hexdigest()
 
 	def update_from(self, new_article, now):
-		"""Update this article's contents from a newer article that's
-		been identified to be the same."""
+		"""Update contents from a newer identical article."""
 		self.entry_info = new_article.entry_info
 		self.sequence = new_article.sequence
 		self.date = new_article.date
@@ -757,7 +747,7 @@ class Article:
 			return self.added
 
 class DayWriter:
-	"""Utility class for writing day sections into a series of articles."""
+	"""Utility for writing day sections into a series of articles."""
 
 	def __init__(self, file, config):
 		self.lasttime = []
@@ -799,61 +789,6 @@ class DayWriter:
 			self.file.write('</div>\n')
 			self.counter -= 1
 
-def parse_time(value, default="m"):
-	"""Parse a time period with optional units (s, m, h, d, w) into a time
-	in seconds. If no unit is specified, use minutes by default; specify
-	the default argument to change this. Raises ValueError if the format
-	isn't recognised."""
-	units = {
-		"s": 1,
-		"m": 60,
-		"h": 3600,
-		"d": 86400,
-		"w": 604800,
-		}
-	for unit, size in list(units.items()):
-		if value.endswith(unit):
-			return int(value[:-len(unit)]) * size
-	return int(value) * units[default]
-
-def parse_bool(value):
-	"""Parse a boolean value (0, 1, false or true). Raise ValueError if
-	the value isn't recognised."""
-	value = value.strip().lower()
-	if value == "0" or value == "false":
-		return False
-	elif value == "1" or value == "true":
-		return True
-	else:
-		raise ValueError("Bad boolean value: " + value)
-
-def parse_list(value):
-	"""Parse a list of keywords separated by whitespace."""
-	return value.strip().split(None)
-
-def parse_feed_args(argparams, arglines):
-	"""Parse a list of feed arguments. Raise ConfigError if the syntax is
-	invalid, or ValueError if an argument value can't be parsed."""
-	args = {}
-	for p in argparams:
-		ps = p.split("=", 1)
-		if len(ps) != 2:
-			raise ConfigError("Bad feed argument in config: " + p)
-		args[ps[0]] = ps[1]
-	for p in arglines:
-		ps = p.split(None, 1)
-		if len(ps) != 2:
-			raise ConfigError("Bad argument line in config: " + p)
-		args[ps[0]] = ps[1]
-	for name, value in list(args.items()):
-		if name == "allowduplicates":
-			args[name] = parse_bool(value)
-		elif name == "keepmin":
-			args[name] = int(value)
-		elif name == "maxage":
-			args[name] = parse_time(value)
-	return args
-
 class ConfigError(Exception):
 	pass
 
@@ -868,6 +803,60 @@ class Config:
 		if logfile_name:
 			self.logfile = open(logfile_name, "a")
 		self.reset()
+
+	def parse_time(self, value, default="m"):
+		"""Parse a time period with optional units (s, m, h, d, w) into a time
+		in seconds. If no unit is specified, use minutes by default; specify
+		the default argument to change this. Raises ValueError if the format
+		isn't recognised."""
+		units = {
+			"s": 1,
+			"m": 60,
+			"h": 3600,
+			"d": 86400,
+			"w": 604800,
+			}
+		for unit, size in list(units.items()):
+			if value.endswith(unit):
+				return int(value[:-len(unit)]) * size
+		return int(value) * units[default]
+
+	def parse_bool(self, value):
+		"""Parse a boolean value (0, 1, false or true)."""
+		value = value.strip().lower()
+		if value == "0" or value == "false":
+			return False
+		elif value == "1" or value == "true":
+			return True
+		else:
+			raise ValueError("Bad boolean value: " + value)
+
+	def parse_list(self, value):
+		"""Parse a list of keywords separated by whitespace."""
+		return value.strip().split(None)
+
+	def parse_feed_args(self, argparams, arglines):
+		"""Parse a list of feed arguments. Raise ConfigError if the syntax is
+		invalid, or ValueError if an argument value can't be parsed."""
+		args = {}
+		for p in argparams:
+			ps = p.split("=", 1)
+			if len(ps) != 2:
+				raise ConfigError("Bad feed argument in config: " + p)
+			args[ps[0]] = ps[1]
+		for p in arglines:
+			ps = p.split(None, 1)
+			if len(ps) != 2:
+				raise ConfigError("Bad argument line in config: " + p)
+			args[ps[0]] = ps[1]
+		for name, value in list(args.items()):
+			if name == "allowduplicates":
+				args[name] = self.parse_bool(value)
+			elif name == "keepmin":
+				args[name] = int(value)
+			elif name == "maxage":
+				args[name] = self.parse_time(value)
+		return args
 
 	def reset(self):
 		# The config file can override some of these.
@@ -956,10 +945,10 @@ class Config:
 			l = l[1].split(None)
 			if len(l) < 2:
 				raise ConfigError("Bad line in config: " + line)
-			self["feedslist"].append((l[1], parse_time(l[0]), parse_feed_args(l[2:], arglines)))
+			self["feedslist"].append((l[1], self.parse_time(l[0]), self.parse_feed_args(l[2:], arglines)))
 			handled_arglines = True
 		elif l[0] == "feeddefaults":
-			self["feeddefaults"] = parse_feed_args(l[1].split(None), arglines)
+			self["feeddefaults"] = self.parse_feed_args(l[1].split(None), arglines)
 			handled_arglines = True
 		elif l[0] == "define":
 			l = l[1].split(None, 1)
@@ -971,49 +960,41 @@ class Config:
 		elif l[0] == "maxarticles":
 			self["maxarticles"] = int(l[1])
 		elif l[0] == "maxage":
-			self["maxage"] = parse_time(l[1])
+			self["maxage"] = self.parse_time(l[1])
 		elif l[0] == "expireage":
-			self["expireage"] = parse_time(l[1])
+			self["expireage"] = self.parse_time(l[1])
 		elif l[0] == "keepmin":
 			self["keepmin"] = int(l[1])
-		elif l[0] == "dayformat":
-			self["dayformat"] = l[1]
-		elif l[0] == "timeformat":
-			self["timeformat"] = l[1]
-		elif l[0] == "datetimeformat":
-			self["datetimeformat"] = l[1]
-		elif l[0] == "userefresh":
-			self["userefresh"] = parse_bool(l[1])
 		elif l[0] == "showfeeds":
-			self["showfeeds"] = parse_bool(l[1])
+			self["showfeeds"] = self.parse_bool(l[1])
 		elif l[0] == "timeout":
-			self["timeout"] = parse_time(l[1], "s")
+			self["timeout"] = self.parse_time(l[1], "s")
 		elif l[0] == "ignoretimeouts":
-			self["ignoretimeouts"] = parse_bool(l[1])
+			self["ignoretimeouts"] = self.parse_bool(l[1])
 		elif l[0] == "showtracebacks":
-			self["showtracebacks"] = parse_bool(l[1])
+			self["showtracebacks"] = self.parse_bool(l[1])
 		elif l[0] == "daysections":
-			self["daysections"] = parse_bool(l[1])
+			self["daysections"] = self.parse_bool(l[1])
 		elif l[0] == "timesections":
-			self["timesections"] = parse_bool(l[1])
+			self["timesections"] = self.parse_bool(l[1])
 		elif l[0] == "blocklevelhtml":
-			self["blocklevelhtml"] = parse_bool(l[1])
+			self["blocklevelhtml"] = self.parse_bool(l[1])
 		elif l[0] == "tidyhtml":
-			self["tidyhtml"] = parse_bool(l[1])
+			self["tidyhtml"] = self.parse_bool(l[1])
 		elif l[0] == "sortbyfeeddate":
-			self["sortbyfeeddate"] = parse_bool(l[1])
+			self["sortbyfeeddate"] = self.parse_bool(l[1])
 		elif l[0] == "currentonly":
-			self["currentonly"] = parse_bool(l[1])
+			self["currentonly"] = self.parse_bool(l[1])
 		elif l[0] == "hideduplicates":
-			self["hideduplicates"] = parse_list(l[1])
+			self["hideduplicates"] = self.parse_list(l[1])
 		elif l[0] == "newfeedperiod":
 			self["newfeedperiod"] = l[1]
 		elif l[0] == "changeconfig":
-			self["changeconfig"] = parse_bool(l[1])
+			self["changeconfig"] = self.parse_bool(l[1])
 		elif l[0] == "numthreads":
 			self["numthreads"] = int(l[1])
 		elif l[0] == "useids":
-			self["useids"] = parse_bool(l[1])
+			self["useids"] = self.parse_bool(l[1])
 		elif l[0] == "include":
 			self.load(l[1], False)
 		else:
