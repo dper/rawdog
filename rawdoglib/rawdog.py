@@ -556,10 +556,7 @@ class Feed:
 			else:
 				errors.append("New URL:     " + location)
 				errors.append("The feed has moved permanently to a new URL.")
-				if config["changeconfig"]:
-					rawdog.change_feed_url(self.url, location, config, errors.append)
-				else:
-					errors.append("You should update its entry in your config file.")
+				rawdog.change_feed_url(self.url, location, config, errors.append)
 			errors.append("")
 
 		if "rawdog_timeout" in p:
@@ -885,7 +882,6 @@ class Config:
 			"currentonly" : False,
 			"hideduplicates" : [],
 			"newfeedperiod" : "3h",
-			"changeconfig": True,
 			"numthreads": 4,
 			"useids": True,
 			}
@@ -989,8 +985,6 @@ class Config:
 			self["hideduplicates"] = self.parse_list(l[1])
 		elif l[0] == "newfeedperiod":
 			self["newfeedperiod"] = l[1]
-		elif l[0] == "changeconfig":
-			self["changeconfig"] = self.parse_bool(l[1])
 		elif l[0] == "numthreads":
 			self["numthreads"] = int(l[1])
 		elif l[0] == "useids":
