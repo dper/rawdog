@@ -858,7 +858,6 @@ class Config:
 			"dayformat" : "%A %Y-%m-%d",
 			"timeformat" : "%I:%M %p",
 			"datetimeformat" : "%Y-%m-%d %I:%M %p",
-			"userefresh" : True,
 			"showfeeds" : True,
 			"timeout" : 30,
 			"daysections" : True,
@@ -1211,11 +1210,8 @@ class Rawdog(Persistable):
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
     <meta name="robots" content="noindex,nofollow,noarchive">
-"""
-		if config["userefresh"]:
-			template += """__refresh__
-"""
-		template += """    <link rel="stylesheet" href="style.css" type="text/css">
+    __refresh__
+    <link rel="stylesheet" href="style.css" type="text/css">
     <title>rawdog</title>
     <link rel="icon" href="favicon.ico" type="image/x-icon" />
 </head>
