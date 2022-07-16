@@ -141,36 +141,32 @@ def sanitise_html(html, baseurl, inline, config):
 		if block_level_re.match(html) is None:
 			html = "<p>" + html
 
-	if config["tidyhtml"]:
-		# This must include: options where the default value in tidy
-		# has changed at some point, and pytidylib's BASE_OPTIONS which
-		# it would otherwise set if we didn't specify them.
-		args = {
-			"numeric_entities": 1,
-			# In tidy 0.99 these are ASCII; in tidy 5, UTF-8.
-			"input_encoding": "ascii",
-			"output_encoding": "ascii",
-			"output_html": 1,
-			"output_xhtml": 0,
-			"output_xml": 0,
-			"indent": 0,
-			"tidy-mark": 0,
-			"alt-text": "",
-			"doctype": "strict",
-			"force-output": 1,
-			# In tidy 0.99, wrap=0 means don't wrap.
-			# In tidy 5, wrap=0 means wrap to width 0.
-			"wrap": 68,
-			}
-		if tidylib is not None:
-			output = tidylib.tidy_document(html, args)[0]
-		elif mxtidy is not None:
-			output = mxtidy.tidy(html, None, None, **args)[2]
-		else:
-			# No Tidy bindings installed -- do nothing.
-			output = "<body>" + html + "</body>"
-		html = output[output.find("<body>") + 6
-		              : output.rfind("</body>")].strip()
+	args = {
+		"numeric_entities": 1,
+		# In tidy 0.99 these are ASCII; in tidy 5, UTF-8.
+		"input_encoding": "ascii",
+		"output_encoding": "ascii",
+		"output_html": 1,
+		"output_xhtml": 0,
+		"output_xml": 0,
+		"indent": 0,
+		"tidy-mark": 0,
+		"alt-text": "",
+		"doctype": "strict",
+		"force-output": 1,
+		# In tidy 0.99, wrap=0 means don't wrap.
+		# In tidy 5, wrap=0 means wrap to width 0.
+		"wrap": 68,
+		}
+	if tidylib is not None:
+		output = tidylib.tidy_document(html, args)[0]
+	elif mxtidy is not None:
+		output = mxtidy.tidy(html, None, None, **args)[2]
+	else:
+		# No Tidy bindings installed -- do nothing.
+		output = "<body>" + html + "</body>"
+	html = output[output.find("<body>") + 6
+	              : output.rfind("</body>")].strip()
 
 	return html
 
@@ -871,7 +867,6 @@ class Config:
 			"tidyhtml" : True,
 			"sortbyfeeddate" : False,
 			"currentonly" : False,
-			"hideduplicates" : ["id"],
 			"newfeedperiod" : "3h",
 			"numthreads": 4,
 			}
