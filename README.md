@@ -4,8 +4,8 @@ __Rawdog__ (RSS Aggregator Without Delusions of Grandeur) is a feed aggregator, 
 
 This fork was created and is maintained by Douglas Perkins. After forking, the code was updated from Python 2 to Python 3, and many plugins and options were removed.
 
-* <https://github.com/dper/rawdog>. This fork.
-* <https://github.com/chirlu/rawdog>. The original code, written by Adam Sampson.
+* <https://github.com/dper/rawdog>. This fork. Douglas's first commit was on July 13, 2022.
+* <https://github.com/chirlu/rawdog>. The original code, written by Adam Sampson. Adam's first commit was on May 5, 2003.
 
 ## Dependencies
 
