@@ -2,10 +2,9 @@
 
 __Rawdog__ (RSS Aggregator Without Delusions of Grandeur) is a feed aggregator, capable of producing a personal "river of news" or a public "planet" page. It supports all common feed formats, including RSS and Atom. It collects articles from a number of feeds and generates a static HTML page listing the newest articles in order.
 
-This version uses Python 3. In the switch from Python 2 to Python 3, many features were removed, including plugins and many options.
+This fork was created and is maintained by Douglas Perkins <https://github.com/dper/rawdog>. After forking, the code was updated from Python 2 to Python 3, and many plugins and options were removed.
 
-* Adam Sampson <ats@offog.org>
-* Douglas Perkins <https://github.com/dper/rawdog>
+Rawdog was originally written by Adam Sampson <ats@offog.org>. The source code is available at <https://github.com/chirlu/rawdog>.
 
 ## Dependencies
 
