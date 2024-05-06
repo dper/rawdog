@@ -49,12 +49,6 @@ import six.moves.urllib.request, six.moves.urllib.error, six.moves.urllib.parse
 import six.moves.urllib.parse
 
 try:
-	import tidylib
-except:
-	print("TidyLib not found.")
-	tidylib = None
-
-try:
 	import mx.Tidy as mxtidy
 	print("mxTidy not found.")
 except:
@@ -158,9 +152,7 @@ def sanitise_html(html, baseurl, inline, config):
 		# In tidy 5, wrap=0 means wrap to width 0.
 		"wrap": 68,
 		}
-	if tidylib is not None:
-		output = tidylib.tidy_document(html, args)[0]
-	elif mxtidy is not None:
+	if mxtidy is not None:
 		output = mxtidy.tidy(html, None, None, **args)[2]
 	else:
 		# No Tidy bindings installed -- do nothing.
