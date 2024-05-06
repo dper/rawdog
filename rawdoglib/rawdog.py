@@ -21,7 +21,7 @@
 from six.moves import map
 import six
 from six.moves import range
-VERSION = "3.0"
+VERSION = "3.3"
 HTTP_AGENT = "rawdog/" + VERSION
 STATE_VERSION = 2
 

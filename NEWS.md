@@ -1,5 +1,9 @@
 # NEWS
 
+## rawdog 3.3
+
+* Removed optional TidyLib use. TidyLib, when enabled, was leading to unexpected formatting around apostrophes and Japanese characters.
+
 ## rawdog 3.2
 
 * This version is in progress now.
