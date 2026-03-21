@@ -1,5 +1,6 @@
 # persister: persist Python objects safely to pickle files
 # Copyright 2003-2014 Adam Sampson <ats@offog.org>
+# Copyright 2026 Douglas Perkins
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
