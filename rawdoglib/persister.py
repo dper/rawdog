@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import six.moves.cPickle as pickle
+import pickle
 import errno
 import fcntl
 import os

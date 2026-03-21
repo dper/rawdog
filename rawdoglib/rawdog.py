@@ -18,10 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from six.moves import map
-import six
-from six.moves import range
-VERSION = "3.3"
+VERSION = "3.0"
 HTTP_AGENT = "rawdog/" + VERSION
 STATE_VERSION = 2
 
@@ -31,7 +28,6 @@ from rawdoglib.persister import Persistable, Persister
 from io import StringIO
 import base64
 import calendar
-import cgi
 import feedparser
 import getopt
 import hashlib
@@ -45,8 +41,8 @@ import sys
 import threading
 import time
 import types
-import six.moves.urllib.request, six.moves.urllib.error, six.moves.urllib.parse
-import six.moves.urllib.parse
+import urllib.request, urllib.error, urllib.parse
+import urllib.parse
 
 try:
 	import mx.Tidy as mxtidy
@@ -314,11 +310,6 @@ def ensure_unicode(value, encoding):
 
 	if isinstance(value, str):
 		return value
-	elif isinstance(value, six.text_type) and type(value) is not six.text_type:
-		# This is a subclass of unicode (e.g.  BeautifulSoup's
-		# NavigableString, which is unpickleable in some versions of
-		# the library), so force it to be a real unicode object.
-		return six.text_type(value)
 	elif isinstance(value, dict):
 		d = {}
 		for (k, v) in list(value.items()):
@@ -329,7 +320,7 @@ def ensure_unicode(value, encoding):
 	else:
 		return value
 
-class BasicAuthProcessor(six.moves.urllib.request.BaseHandler):
+class BasicAuthProcessor(urllib.request.BaseHandler):
 	"""urllib2 handler that does HTTP basic authentication
 	or proxy authentication with a fixed username and password."""
 
@@ -346,7 +337,7 @@ class BasicAuthProcessor(six.moves.urllib.request.BaseHandler):
 
 	https_request = http_request
 
-class DisableIMProcessor(six.moves.urllib.request.BaseHandler):
+class DisableIMProcessor(urllib.request.BaseHandler):
 	"""urllib2 handler that disables RFC 3229 for a request."""
 
 	def http_request(self, req):
@@ -357,7 +348,7 @@ class DisableIMProcessor(six.moves.urllib.request.BaseHandler):
 
 	https_request = http_request
 
-class ResponseLogProcessor(six.moves.urllib.request.BaseHandler):
+class ResponseLogProcessor(urllib.request.BaseHandler):
 	"""urllib2 handler that maintains a log of HTTP responses."""
 
 	# Run after anything that's mangling headers (usually 500 or less), but
@@ -435,7 +426,7 @@ class Feed:
 			if name.endswith("_proxy"):
 				proxies[name[:-6]] = value
 		if len(proxies) != 0:
-			handlers.append(six.moves.urllib.request.ProxyHandler(proxies))
+			handlers.append(urllib.request.ProxyHandler(proxies))
 
 		if "proxyuser" in self.args and "proxypassword" in self.args:
 			handlers.append(BasicAuthProcessor(self.args["proxyuser"], self.args["proxypassword"], proxy=True))
@@ -478,7 +469,7 @@ class Feed:
 			e = result.get("bozo_exception")
 			if self.is_timeout_exception(e):
 				result = {"rawdog_timeout": e}
-			elif isinstance(e, six.moves.urllib.error.URLError):
+			elif isinstance(e, urllib.error.URLError):
 				result = {"rawdog_exception": e}
 		except Exception as e:
 			if self.is_timeout_exception(e):
@@ -532,7 +523,7 @@ class Feed:
 			# "Location: //foo/bar". If so, fail.
 			valid_uri = True
 			if location is not None:
-				parsed = six.moves.urllib.parse.urlparse(location)
+				parsed = urllib.parse.urlparse(location)
 				if parsed.scheme == "" or parsed.netloc == "":
 					valid_uri = False
 

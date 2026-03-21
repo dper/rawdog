@@ -37,9 +37,9 @@ import io
 import feedparser
 import gzip
 import re
-import six.moves.urllib.request, six.moves.urllib.error, six.moves.urllib.parse
-import six.moves.urllib.parse
-import six.moves.html_parser
+import urllib.request, urllib.error, urllib.parse
+import urllib.parse
+import html.parser
 
 HTTP_AGENT = "feedscanner/1.0"
 
@@ -55,11 +55,11 @@ def is_feed(url, agent=HTTP_AGENT):
 def fetch_url(url, agent=HTTP_AGENT):
     """Fetch the given URL and return the data from it as a Unicode string."""
 
-    request = six.moves.urllib.request.Request(url)
+    request = urllib.request.Request(url)
     request.add_header("User-Agent", agent)
     request.add_header("Accept-Encoding", "gzip")
 
-    f = six.moves.urllib.request.urlopen(request)
+    f = urllib.request.urlopen(request)
     headers = f.info()
     data = f.read()
     f.close()
@@ -79,15 +79,15 @@ def fetch_url(url, agent=HTTP_AGENT):
 
     return data
 
-class FeedFinder(six.moves.html_parser.HTMLParser):
+class FeedFinder(html.parser.HTMLParser):
     def __init__(self, base_uri):
-        six.moves.html_parser.HTMLParser.__init__(self)
+        html.parser.HTMLParser.__init__(self)
         self.found = []
         self.count = 0
         self.base_uri = base_uri
 
     def add(self, score, href):
-        url = six.moves.urllib.parse.urljoin(self.base_uri, href)
+        url = urllib.parse.urljoin(self.base_uri, href)
         lower = url.lower()
 
         # Some sites provide feeds both for entries and comments;
@@ -134,7 +134,7 @@ def feeds(page_url, agent=HTTP_AGENT):
     parser = FeedFinder(page_url)
     try:
         parser.feed(data)
-    except six.moves.html_parser.HTMLParseError:
+    except html_parser.HTMLParseError:
         pass
     found = parser.urls()
 
