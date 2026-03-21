@@ -1,7 +1,7 @@
 # rawdog: RSS aggregator without delusions of grandeur.
 #
 # Copyright 2003-2021 Adam Sampson <ats@offog.org>
-# Copyright 2022 Douglas Perkins
+# Copyright 2022-2026 Douglas Perkins
 #
 # https://github.com/dper/rawdog/
 #
@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-VERSION = "3.0"
+VERSION = "3.4"
 HTTP_AGENT = "rawdog/" + VERSION
 STATE_VERSION = 2
 

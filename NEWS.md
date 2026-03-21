@@ -1,10 +1,13 @@
 # NEWS
 
+## rawdog 3.3
+
+* Removed optional TidyLib use. TidyLib, when enabled, was leading to unexpected formatting around apostrophes and Japanese characters.
+
 ## rawdog 3.2
 
-* This version is in progress now.
 * Removed plugins.
-* Removed around half of the old options. If you have an old config file, you might get startup errors. If you really need behavior that is no longer supported, you'll have to edit the code manually. However, many of those options added flexiblity that's not useful in a simple single user setup, is there shouldn't be major concerns.
+* Removed around half of the old options. If you have an old config file, you might get startup errors. If you really need behavior that is no longer supported, you'll have to edit the code manually. However, many of those options added flexiblity that's not useful in a simple single user setup, so there shouldn't be major concerns.
 
 ## rawdog 3.1
 
