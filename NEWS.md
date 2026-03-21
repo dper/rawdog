@@ -1,5 +1,9 @@
 # NEWS
 
+## rawdog 3.4
+
+* Removed support for python2. It was causing errors on some newer systems.
+
 ## rawdog 3.3
 
 * Removed optional TidyLib use. TidyLib, when enabled, was leading to unexpected formatting around apostrophes and Japanese characters.
