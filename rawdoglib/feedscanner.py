@@ -9,14 +9,12 @@ It finds links to feeds within the following elements:
 
 It orders feeds using a quality heuristic: the first result is the most
 likely to be a feed for the given URL.
-
-Required: Python 2.4 or later, feedparser
 """
-
 
 __license__ = """
 Copyright (c) 2008 Decklin Foster <decklin@red-bean.com>
 Copyright (c) 2013, 2015, 2021 Adam Sampson <ats@offog.org>
+Copyright (c) 2026 Douglas Perkins
 
 Permission to use, copy, modify, and/or distribute this software for
 any purpose with or without fee is hereby granted, provided that
